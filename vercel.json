@@ -1,0 +1,8 @@
+{
+  "cleanUrls": false,
+  "rewrites": [
+    { "source": "/", "destination": "/MBTI-test.html" },
+    { "source": "/self", "destination": "/MBTI-test.html" },
+    { "source": "/peer", "destination": "/MBTI-peer-test.html" }
+  ]
+}

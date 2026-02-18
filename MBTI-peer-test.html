@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>镜像人生 | MBTI 他评空间</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* 保持与主测评完全一致的样式变量和设计 */
+        :root {
+            --color-blue-deep: #588dad;
+            --color-blue-light: #7da9bd;
+            --color-pink-deep: #d9a0a8;
+            --color-pink-light: #e3b5b9;
+            --color-text: #2c3e50;
+            --color-gray-bar: #e6e6e6; 
+            
+            --glass-bg: rgba(255, 255, 255, 0.55);
+            --glass-border: rgba(255, 255, 255, 0.8);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+            --glass-blur: 25px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Noto Serif SC', serif;
+            background: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%); 
+            background-image: radial-gradient(circle at 10% 20%, var(--color-pink-light) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, var(--color-blue-light) 0%, transparent 40%),
+                              linear-gradient(135deg, #fff5f5 0%, #f0f7ff 100%);
+            background-attachment: fixed;
+            color: var(--color-text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 1.7;
+            overflow-x: hidden;
+            padding: 20px 0;
+            font-size: 15px;
+        }
+
+        .container { width: 100%; max-width: 800px; padding: 1rem; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            position: relative;
+            width: 100%;
+            animation: fadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0) 100%);
+            opacity: 0.8;
+        }
+
+        h1, h2, h3 { font-weight: 700; color: var(--color-blue-deep); }
+        #welcome-screen { text-align: left; }
+
+        .main-title {
+            font-size: 2rem; margin-bottom: 1.2rem; line-height: 1.3; text-align: center;
+            background: linear-gradient(45deg, var(--color-blue-deep), var(--color-pink-deep));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        }
+
+        .intro-text p { margin-bottom: 1rem; color: #444; font-size: 0.95rem; text-align: justify; }
+        .intro-text strong { color: var(--color-blue-deep); font-weight: 600; }
+
+        .quote-box {
+            border-left: 3px solid var(--color-pink-deep);
+            background: rgba(255, 255, 255, 0.4);
+            padding: 1rem 1.2rem; margin: 1.2rem 0;
+            font-style: italic; border-radius: 0 10px 10px 0;
+            color: #555; font-size: 0.9rem;
+        }
+
+        .footer-note {
+            margin-top: 2.5rem; padding-top: 1.2rem; border-top: 1px solid rgba(0,0,0,0.06);
+            font-size: 0.75rem; color: #888; line-height: 1.5; text-align: justify;
+        }
+
+        .instruction-list { list-style: none; margin: 1.5rem 0; }
+        .instruction-item { margin-bottom: 1.2rem; display: flex; align-items: flex-start; }
+        .instruction-num {
+            background: linear-gradient(135deg, var(--color-blue-light), var(--color-blue-deep));
+            color: white; width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin-right: 12px; flex-shrink: 0; font-weight: bold; font-size: 0.8rem; margin-top: 3px;
+            box-shadow: 0 3px 6px rgba(88, 141, 173, 0.3);
+        }
+        .instruction-content { flex: 1; font-size: 0.95rem; color: #444; }
+        .instruction-content strong { color: var(--color-blue-deep); display: block; margin-bottom: 3px; }
+
+        .btn {
+            background: linear-gradient(135deg, var(--color-blue-deep), var(--color-blue-light));
+            color: white; border: none; padding: 0.8rem 2.5rem; font-size: 1rem;
+            border-radius: 50px; cursor: pointer; font-family: 'Noto Serif SC', serif;
+            transition: all 0.3s ease; box-shadow: 0 8px 16px rgba(88, 141, 173, 0.25);
+            letter-spacing: 1px; display: block; margin: 2rem auto 0; width: fit-content;
+            position: relative; overflow: hidden;
+            /* 新增：支持a标签样式 */
+            text-decoration: none; text-align: center;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 20px rgba(88, 141, 173, 0.35); }
+        .btn:active { transform: translateY(0); }
+        .btn::after {
+            content: ""; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); transition: 0.5s;
+        }
+        .btn:hover::after { left: 100%; }
+
+        .btn-back {
+            background: transparent; color: #888; border: 1px solid rgba(0,0,0,0.1);
+            padding: 0.5rem 1.5rem; font-size: 0.85rem; border-radius: 30px;
+            cursor: pointer; font-family: 'Noto Serif SC', serif; transition: all 0.3s ease;
+            display: block; margin: 2rem auto 0; width: fit-content;
+        }
+        .btn-back:hover { background: rgba(255,255,255,0.5); color: var(--color-blue-deep); border-color: var(--color-blue-light); }
+
+        #quiz-screen, #instruction-screen, #result-screen { display: none; }
+        #result-screen { padding-bottom: 3rem; }
+
+        /* 梦幻星星进度条 */
+        .progress-container {
+            width: 100%; height: 14px; background: rgba(255, 255, 255, 0.4);
+            border-radius: 20px; margin-bottom: 3rem; position: relative;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .progress-track { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 20px; overflow: hidden; }
+        .progress-fill {
+            height: 100%;
+            background-color: transparent;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14' fill='%23d9a0a8'%3E%3Cpath d='M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279-7.416-3.967-7.417 3.967 1.481-8.279-6.064-5.828 8.332-1.151z'/%3E%3C/svg%3E");
+            background-repeat: repeat-x; background-position: left center; background-size: 14px 14px;
+            width: 0%; transition: width 0.5s ease-out; border-radius: 20px; position: relative;
+            filter: drop-shadow(0 0 3px rgba(217, 160, 168, 0.6));
+        }
+        .progress-icon {
+            position: absolute; top: -22px; transform: translateX(-50%);
+            width: 50px; height: 50px; transition: left 0.5s ease-out;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15)); pointer-events: none;
+            z-index: 10; display: flex; justify-content: center; align-items: center;
+        }
+        .progress-fairy-img {
+            width: 100%; height: 100%; object-fit: cover;
+            border-radius: 50%; border: 2px solid white; background-color: #fff;
+        }
+
+        .question-number { color: var(--color-pink-deep); font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 1px; }
+        .question-text { font-size: 1.25rem; margin-bottom: 2rem; line-height: 1.5; font-weight: 600; color: var(--color-text); }
+        .options-container { display: flex; flex-direction: column; gap: 1rem; }
+        
+        .option-btn {
+            background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px); padding: 1.2rem; border-radius: 16px;
+            text-align: left; font-size: 0.95rem; font-family: 'Noto Serif SC', serif;
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative; overflow: hidden; line-height: 1.5; color: #444;
+        }
+        .option-btn:hover { 
+            background: rgba(255, 255, 255, 0.9); transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(88, 141, 173, 0.1); border-color: var(--color-pink-light);
+        }
+        .option-btn:active { transform: scale(0.98); }
+
+        .result-header { text-align: center; margin-bottom: 2.5rem; }
+        .result-subtitle { font-size: 1rem; color: #666; margin-bottom: 0.4rem; }
+        .result-type { 
+            font-size: 3.5rem; font-weight: 700; color: var(--color-blue-deep); 
+            line-height: 1; margin-bottom: 0.5rem; letter-spacing: 3px; 
+            text-shadow: 2px 2px 0px rgba(255,255,255,0.8), 0 10px 30px rgba(88, 141, 173, 0.2);
+        }
+        .result-name { font-size: 1.5rem; color: var(--color-blue-light); margin-bottom: 1.2rem; font-weight: 600; }
+        .tags-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1.5rem; }
+        .tag { 
+            background: linear-gradient(135deg, var(--color-pink-light), var(--color-pink-deep)); 
+            color: #fff; padding: 0.4rem 1rem; border-radius: 30px; font-size: 0.85rem; 
+            font-weight: 600; box-shadow: 0 4px 10px rgba(217, 160, 168, 0.3);
+        }
+
+        .chart-container {
+            margin-bottom: 2.5rem; background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.6);
+            padding: 2rem; border-radius: 20px;
+        }
+        .bar-group { margin-bottom: 1.5rem; }
+        .bar-labels { display: flex; justify-content: space-between; margin-bottom: 0.6rem; font-size: 0.9rem; font-weight: 600; }
+        .label-left { color: var(--color-blue-deep); }
+        .label-right { color: var(--color-pink-deep); }
+
+        .bar-track {
+            height: 14px; border-radius: 10px; position: relative; overflow: hidden;
+            display: flex; width: 100%; background: #fff; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .bar-fill-left, .bar-fill-right { height: 100%; transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1); position: relative; }
+        .color-blue { background: linear-gradient(90deg, #588dad 0%, #7da9bd 100%); }
+        .color-pink { background: linear-gradient(90deg, #e3b5b9 0%, #d9a0a8 100%); }
+        .color-gray { background: var(--color-gray-bar); }
+        .bar-divider {
+            width: 3px; background: rgba(255,255,255,1); height: 100%; position: absolute; left: 0; top: 0; z-index: 2;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+
+        .grid-layout { display: grid; grid-template-columns: 1fr; gap: 1.2rem; margin-bottom: 2rem; }
+        @media (min-width: 768px) { .grid-layout { grid-template-columns: 1fr 1fr; } .container { padding: 1.5rem; } }
+        @media (max-width: 768px) {
+            body { padding: 10px 0; }
+            .container { max-width: 100%; padding: 0.8rem; }
+            .card { padding: 1.35rem 1rem; border-radius: 18px; }
+            .main-title { font-size: 1.5rem; line-height: 1.35; }
+            .question-text { font-size: 1.05rem; margin-bottom: 1.25rem; }
+            .option-btn { padding: 1rem; font-size: 0.9rem; border-radius: 14px; }
+            .chart-container { padding: 1rem; }
+            .invite-actions { flex-direction: column; }
+            .btn, .btn-invite { width: 100%; max-width: none; }
+        }
+        @media (max-width: 420px) {
+            .container { padding: 0.65rem; }
+            .main-title { font-size: 1.32rem; }
+            .result-type { font-size: 2.3rem; letter-spacing: 1px; }
+            .result-name { font-size: 1.15rem; }
+            .tag { font-size: 0.78rem; }
+            .question-number { font-size: 0.85rem; }
+            .code-input { font-size: 1rem; padding: 0.82rem 0.95rem; }
+        }
+
+        .grid-item {
+            background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            padding: 1.5rem; border-radius: 20px;
+            border-top: 5px solid var(--color-blue-light);
+            border-bottom: 1px solid rgba(255,255,255,0.5);
+            border-left: 1px solid rgba(255,255,255,0.5);
+            border-right: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .grid-item:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(31, 38, 135, 0.1); background: rgba(255, 255, 255, 0.75); }
+        .grid-item:nth-child(2) { border-top-color: var(--color-pink-deep); }
+        .grid-item:nth-child(3) { border-top-color: var(--color-pink-light); }
+        .grid-item:nth-child(4) { border-top-color: var(--color-blue-deep); }
+
+        .grid-title { 
+            font-size: 1.05rem; margin-bottom: 0.8rem; display: flex; align-items: center; 
+            border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 0.6rem;
+            font-weight: 700; color: var(--color-text);
+        }
+        .grid-icon { width: 24px; height: 24px; margin-right: 10px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .icon-social { stroke: var(--color-blue-deep); }
+        .icon-brain { stroke: var(--color-pink-deep); }
+        .icon-scale { stroke: var(--color-pink-light); }
+        .icon-foot { stroke: var(--color-blue-deep); }
+        .grid-content { font-size: 0.9rem; color: #555; line-height: 1.6; text-align: justify; }
+        .highlight { font-weight: normal; color: inherit; background: none; padding: 0; }
+        
+        .finish-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.7), rgba(255,255,255,0.4));
+            border-radius: 20px; padding: 2rem; text-align: center;
+            border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            margin-top: 3rem; animation: fadeIn 1.2s ease-out;
+        }
+        .finish-card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--color-blue-deep); }
+        .finish-card p { font-size: 0.9rem; color: #666; margin-bottom: 1.5rem; line-height: 1.5; }
+        /* --- 优化的彩蛋样式开始（来自 mbti-test0217） --- */
+        .easter-section {
+            margin-top: 3rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+        .easter-card {
+            perspective: 1500px;
+            cursor: pointer;
+            width: 100%;
+            max-width: none;
+            height: 240px;
+            position: relative;
+            z-index: 10;
+        }
+        .easter-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -10px rgba(88, 141, 173, 0.2);
+        }
+        .easter-card:hover .easter-card-inner {
+            box-shadow: 0 25px 60px -12px rgba(88, 141, 173, 0.45);
+            transform: translateY(-5px);
+        }
+        .easter-card.active .easter-card-inner {
+            transform: scale(0.97);
+            transition: transform 0.1s;
+        }
+        .easter-card.flipped .easter-card-inner {
+            transform: rotateY(180deg);
+        }
+        .easter-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 24px;
+            padding: 2rem;
+            box-sizing: border-box;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        .easter-front {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,247,255,0.85) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.8);
+        }
+        .easter-front::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(217, 160, 168, 0.15) 0%, transparent 60%);
+            animation: rotateBg 12s linear infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+        @keyframes rotateBg { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .easter-front-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            width: 100%;
+        }
+        .easter-icon-box {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #fff 0%, #f0f7ff 100%);
+            border-radius: 50%;
+            box-shadow: 0 8px 16px rgba(88, 141, 173, 0.15), inset 0 2px 5px rgba(255,255,255,1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.2rem;
+            color: var(--color-blue-light);
+            animation: floatIcon 3s ease-in-out infinite;
+            border: 1px solid rgba(255,255,255,0.9);
+        }
+        .mystery-pulse {
+            width: 20px;
+            height: 20px;
+            background: var(--color-pink-deep);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 0 15px var(--color-pink-light);
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+        .mystery-pulse::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border: 1px solid var(--color-pink-light);
+            border-radius: 50%;
+            animation: ripple 2s infinite ease-out;
+            opacity: 0;
+        }
+        @keyframes pulse-glow { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 1; } }
+        @keyframes ripple { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
+        @keyframes floatIcon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        #easter-egg-text {
+            font-size: 1.35rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--color-blue-deep), var(--color-pink-deep));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+        .text-pop {
+            animation: textPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes textPop {
+            0% { transform: scale(0.9); opacity: 0; transform: translateY(10px); }
+            100% { transform: scale(1); opacity: 1; transform: translateY(0); }
+        }
+        .easter-hint-text {
+            font-size: 0.85rem;
+            color: #8899a6;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            font-weight: 400;
+        }
+        .easter-back {
+            background: linear-gradient(160deg, #1a202c 0%, #2d3748 100%);
+            transform: rotateY(180deg);
+            align-items: flex-start;
+            justify-content: flex-start;
+            text-align: left;
+            overflow-y: auto;
+            border-color: rgba(255,255,255,0.1);
+            color: #cbd5e0;
+        }
+        .section-title {
+            width: 100%;
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.8rem;
+        }
+        .easter-back .section-title {
+            color: var(--color-pink-deep);
+            border-bottom: 1px dashed rgba(255,255,255,0.15);
+        }
+        .advice-panel .section-title {
+            color: #2f3a4a;
+            border-bottom: 1px dashed rgba(88, 141, 173, 0.35);
+        }
+        .easter-back p {
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: #e2e8f0;
+            text-align: justify;
+            margin: 0;
+            width: 100%;
+        }
+        /* --- 优化的彩蛋样式结束 --- */
+        .advice-trigger {
+            margin-top: 1.2rem;
+            text-align: center;
+            color: #666;
+        }
+        .advice-trigger p {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.92rem;
+        }
+        .advice-arrow {
+            width: 52px;
+            height: 52px;
+            border: none;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(164, 198, 222, 0.95), rgba(90, 138, 170, 0.95));
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+            box-shadow: 0 10px 22px rgba(88, 141, 173, 0.32), inset 0 1px 2px rgba(255,255,255,0.65);
+            animation: arrowPulse 1.8s ease-in-out infinite;
+            position: relative;
+        }
+        .advice-arrow::after {
+            content: '';
+            position: absolute;
+            inset: 5px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.45);
+            pointer-events: none;
+        }
+        .advice-arrow svg {
+            width: 23px;
+            height: 23px;
+            stroke: #f5fbff;
+            stroke-width: 2.6;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 1px 1px rgba(38, 71, 96, 0.35));
+        }
+        .advice-arrow.open {
+            transform: rotate(180deg);
+            animation: none;
+        }
+        .advice-arrow:hover {
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 0 14px 26px rgba(88, 141, 173, 0.38), inset 0 1px 2px rgba(255,255,255,0.72);
+            filter: brightness(1.04);
+        }
+        .advice-panel {
+            margin-top: 0;
+            padding: 1.1rem 1rem;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.75);
+            border: 1px dashed rgba(88, 141, 173, 0.35);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transform: translateY(-12px);
+            transition: max-height 0.5s ease, opacity 0.5s ease, transform 0.5s ease, margin-top 0.5s ease;
+        }
+        .advice-panel.open {
+            margin-top: 0.6rem;
+            max-height: 500px;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @keyframes arrowPulse {
+            0% { box-shadow: 0 8px 18px rgba(88, 141, 173, 0.22); }
+            50% { box-shadow: 0 12px 24px rgba(88, 141, 173, 0.38); }
+            100% { box-shadow: 0 8px 18px rgba(88, 141, 173, 0.22); }
+        }
+
+        .btn-invite {
+            background: linear-gradient(135deg, var(--color-pink-deep), var(--color-pink-light));
+            color: white;
+            border: none;
+            padding: 0.9rem 2.5rem;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: 'Noto Serif SC', serif;
+            box-shadow: 0 8px 16px rgba(217, 160, 168, 0.3);
+            transition: all 0.3s ease;
+            text-decoration: none; display: inline-block;
+        }
+        .btn-invite:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(217, 160, 168, 0.4);
+        }
+        .code-entry {
+            margin-top: 1.2rem;
+            padding: 1rem;
+            border-radius: 14px;
+            border: 1px dashed rgba(88, 141, 173, 0.4);
+            background: rgba(88, 141, 173, 0.07);
+            text-align: center;
+        }
+        .code-entry p {
+            margin: 0 0 0.6rem;
+            font-size: 0.9rem;
+            color: #5a6470;
+        }
+        .code-input {
+            width: min(320px, 100%);
+            border: 1px solid rgba(88, 141, 173, 0.35);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 0.65rem 0.85rem;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-family: 'Noto Serif SC', serif;
+            outline: none;
+            margin-bottom: 0.7rem;
+        }
+
+        /* 复制成功的提示 */
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: rgba(44, 62, 80, 0.9);
+            color: #fff;
+            text-align: center;
+            border-radius: 50px;
+            padding: 16px;
+            position: fixed;
+            z-index: 100;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+
+        .action-area { text-align: center; margin-top: 2.5rem; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- 1. 欢迎页面 (他评视角) -->
+    <div id="welcome-screen" class="card">
+        <h1 class="main-title">镜像人生 | MBTI 他评空间</h1>
+        
+        <div class="intro-text">
+            <p><strong>在你眼里，TA 到底是个怎样的人？或者说……TA 真的了解自己吗？</strong></p>
+            <p>你一定有过这样的内心吐槽： 明明在熟人面前是个“社交悍匪”，TA却偏说自己是“重度社恐”；明明平时是个“细节控+操心命”，TA却总觉得自己“随性洒脱”。</p>
+            <p>心理学中的“乔哈里视窗”告诉我们，每个人身上都有一块「盲区」——那是自己看不见，但别人却看得清清楚楚的特质。 今天，你的朋友向你发送了这份特殊的邀请，因为在TA寻找真实自我的路上，<strong>你，就是那面至关重要的“镜子”。</strong></p>
+            <div class="quote-box">
+                也许TA已经给自己画好了一张素描，但现在，TA需要你来为这张画共同上色。你的视角、你的感受、你对TA的真实印象，将拼凑出TA更完整的人格画像。
+            </div>
+            <p>欢迎来到【镜像人生 MBTI 他评空间】。 这是一次跨越认知盲区的对话。不用滤镜，无需吹捧，准备好帮TA照出“真实轮廓”了吗？</p>
+            <p style="text-align: center; margin-top: 15px; color: var(--color-blue-deep); font-weight: bold;">👉 迫不及待了，让我来揭秘真实的TA！</p>
+        </div>
+        
+        <button class="btn" onclick="goToInstruction()">开启他评之旅</button>
+        <div class="code-entry">
+            <p>如果你是通过邀请码进入，请在这里输入邀请码：</p>
+            <input id="invite-code-input" class="code-input" type="text" placeholder="请输入8位邀请码" maxlength="20">
+            <br>
+            <button class="btn-invite" onclick="useInviteCode()">使用邀请码开始</button>
+        </div>
+
+        <div class="footer-note">
+            迈尔斯-布里格斯类型指标（MBTI）他评版：通过观察者的客观视角，辅助受测者探索“盲区自我”。测评结果将反馈给邀请发起人，用于对比自评结果，形成更完整的全息人格画像。
+        </div>
+    </div>
+
+    <!-- 2. 指导语页面 -->
+    <div id="instruction-screen" class="card">
+        <h2 style="text-align: center; margin-bottom: 1.5rem;">测评说明</h2>
+        <p style="font-size: 1rem; color: #555; margin-bottom: 1.5rem; text-align: center;">为了给TA更客观的评价，请注意以下 4 点：</p>
+        <ul class="instruction-list">
+            <li class="instruction-item"><div class="instruction-num">1</div><div class="instruction-content"><strong>凭直觉作答（最重要！）</strong>不要过度思考，回想你们相处时的真实细节。选择你“认为TA会怎么做”，而不是“TA希望自己怎么做”。</div></li>
+            <li class="instruction-item"><div class="instruction-num">2</div><div class="instruction-content"><strong>耗时约 5分钟</strong>请在相对放松、不被打扰的环境下一次性完成。</div></li>
+            <li class="instruction-item"><div class="instruction-num">3</div><div class="instruction-content"><strong>没有正确答案</strong>别担心你的答案会“得罪”人。你越诚实，这面镜子就越清晰，这对TA来说才是最宝贵的礼物。</div></li>
+            <li class="instruction-item"><div class="instruction-num">4</div><div class="instruction-content"><strong>解锁镜像报告</strong>完成测评后，你的评价将自动整合到TA的测评报告中，请提醒TA查看结果。</div></li>
+        </ul>
+        <button class="btn" onclick="startQuiz()">明白了，Let's Go！</button>
+    </div>
+
+    <!-- 3. 测评页面 -->
+    <div id="quiz-screen" class="card">
+        <div class="progress-container">
+            <div class="progress-track">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <!-- 小天使图标 -->
+            <div class="progress-icon" id="progress-icon">
+                <img src="fairy.png" class="progress-fairy-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <svg class="progress-fairy-fallback" style="display:none; width:40px; height:40px;" viewBox="0 0 24 24" fill="none" stroke="#d9a0a8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a5 5 0 0 1 5 5v2a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5z"></path>
+                    <path d="M12 14v8"></path>
+                    <path d="M8 14a8 8 0 0 0-6-6"></path>
+                    <path d="M16 14a8 8 0 0 1 6-6"></path>
+                    <path d="M12 14a3 3 0 0 1 3 3v2a3 3 0 0 1-6 0v-2a3 3 0 0 1 3-3z"></path>
+                </svg>
+            </div>
+        </div>
+        
+        <div id="question-container"></div>
+        <button id="prev-btn" class="btn-back" onclick="prevQuestion()" style="display: none;">返回上一题</button>
+    </div>
+
+    <!-- 4. 结果页面 -->
+    <div id="result-screen">
+        <div class="card">
+            <div class="result-header">
+                <div class="result-subtitle">你眼中的TA是</div>
+                <div class="result-type" id="result-type">...</div>
+                <div class="result-name" id="result-name">正在生成分析...</div>
+                <div class="tags-container" id="result-tags"></div>
+            </div>
+
+            <div class="chart-container" id="chart-container"></div>
+
+            <div class="grid-layout">
+                <div class="grid-item">
+                    <div class="grid-title"><svg class="grid-icon icon-social" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>社交与能量场</div>
+                    <div class="grid-content" id="content-social"></div>
+                </div>
+                <div class="grid-item">
+                    <div class="grid-title"><svg class="grid-icon icon-brain" viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"></path><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"></path></svg>认知与接收信息</div>
+                    <div class="grid-content" id="content-cognition"></div>
+                </div>
+                <div class="grid-item">
+                    <div class="grid-title"><svg class="grid-icon icon-scale" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>决策与输出信息</div>
+                    <div class="grid-content" id="content-decision"></div>
+                </div>
+                <div class="grid-item">
+                    <div class="grid-title"><svg class="grid-icon icon-foot" viewBox="0 0 24 24"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 11 3.8 11 8c0 3.85-2 5.3-2 9v3"></path><path d="M14 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C8.63 6 7 7.8 7 12c0 3.85 2 5.3 2 9v3"></path></svg>生活与行动模式</div>
+                    <div class="grid-content" id="content-lifestyle"></div>
+                </div>
+            </div>
+
+            <div class="easter-section">
+                <div id="easter-egg-card" class="easter-card" onclick="handleEasterEggClick()">
+                    <div class="easter-card-inner">
+                        <div class="easter-face easter-front">
+                            <div class="easter-front-content">
+                                <div class="easter-icon-box">
+                                    <div class="mystery-pulse"></div>
+                                </div>
+                                <div id="easter-egg-text">这是一个彩蛋</div>
+                                <div class="easter-hint-text">免责声明：对影响到朋友、情侣、家庭之间和谐表示抱歉，但概不负责😳</div>
+                            </div>
+                        </div>
+                        <div class="easter-face easter-back">
+                            <div class="section-title">阴暗面</div>
+                            <p id="dark-side-text"></p>
+                        </div>
+                    </div>
+                </div>
+                <div id="advice-trigger" class="advice-trigger" style="display:none;">
+                    <p>别走开，还有一段话想对TA说……</p>
+                    <button id="advice-arrow" class="advice-arrow" onclick="toggleAdvice(event)" aria-label="展开提醒与建议">
+                        <svg viewBox="0 0 24 24"><path d="M12 19V6"></path><path d="m17.5 12.5-5.5 6-5.5-6"></path></svg>
+                    </button>
+                </div>
+                <div id="advice-panel" class="advice-panel">
+                    <div class="section-title">提醒与建议</div>
+                    <p id="advice-text"></p>
+                </div>
+            </div>
+
+            <!-- 测评结束提示区域 -->
+            <div class="finish-card">
+                <h3>🎉 评价已完成</h3>
+                <p>你的评价已经生成。点击下方按钮生成“反馈链接”发给TA，TA就能看到你眼中的样子了！</p>
+                <!-- 生成反馈链接 -->
+                <button class="btn-invite" onclick="generateFeedbackLink()">🔗 生成反馈报告发给TA</button>
+            </div>
+
+        </div>
+    </div>
+    
+    <!-- 提示框 -->
+    <div id="toast" class="toast">✅ 反馈链接已复制，快发给TA吧！</div>
+
+</div>
+
+<script>
+    // --- 他评视角题库 ---
+    const questions = [
+        // E/I
+        { id: 1, text: "有一场重要的行业峰会，TA会选择：", options: [{ text: "穿梭于人群中，与尽可能多的人交换名片和想法。", value: "E" }, { text: "专注于几场深度演讲，只与少数几个志同道合的人深入交流。", value: "I" }] },
+        { id: 2, text: "当TA收到一份惊喜的礼物时，可能的反应可能是：", options: [{ text: "毫不掩饰地大笑或欢呼，周围人都能看到TA很开心。", value: "E" }, { text: "内心激动，但表面上只是微笑着说“谢谢，我很喜欢”。", value: "I" }] },
+        { id: 3, text: "辛苦了一周终于到了周末，TA会倾向于：", options: [{ text: "出去找朋友玩，越热闹越好。", value: "E" }, { text: "独处或约上一两个最好的朋友随意聊聊天。", value: "I" }] },
+        { id: 4, text: "面临一个新挑战或新任务，TA的第一反应是：", options: [{ text: "去找人聊，在交流中理清思路。", value: "E" }, { text: "先自己花时间研究一下，形成初步想法后再找人讨论。", value: "I" }] },
+        { id: 5, text: "在朋友聚会中，TA通常扮演的角色是：", options: [{ text: "气氛组担当，有TA在场就不会冷场。", value: "E" }, { text: "安静的倾听者，即使不说话也让人感到舒服。", value: "I" }] },
+        { id: 6, text: "如果TA是一个手机App，你认为TA会希望自己是：", options: [{ text: "一款社交软件，连接无数有趣的人。", value: "E" }, { text: "一款笔记软件，记录和整理自己的深度思考。", value: "I" }] },
+        { id: 7, text: "TA的精神状态更像是：", options: [{ text: "一块充电宝，能在人群中快速充电，并为他人带来能量。", value: "E" }, { text: "一部需要连接Wi-Fi的手机，独处时信号满格，人多时很容易电量告急。", value: "I" }] },
+        // S/N
+        { id: 8, text: "阅读一篇新闻报道时，TA更关注：", options: [{ text: "事件发生的时间、地点、人物和具体数据。", value: "S" }, { text: "事件背后反映的社会趋势和可能带来的长远影响。", value: "N" }] },
+        { id: 9, text: "当TA选工作时，你更看重：", options: [{ text: "当下能提供的回报（如薪酬福利等）", value: "S" }, { text: "未来发展成长的空间和想象力", value: "N" }] },
+        { id: 10, text: "当TA在学习新知识时，更喜欢那种类型的课程？", options: [{ text: "“xx话术100例”，学完马上就能用。", value: "S" }, { text: "“xx理论研究”，帮助理解底层逻辑。", value: "N" }] },
+        { id: 11, text: "组装一件新家具时，TA会：", options: [{ text: "严格按照说明书的每一步进行操作。", value: "S" }, { text: "看一眼整体示意图，然后凭感觉和逻辑开始动手。", value: "N" }] },
+        { id: 12, text: "遇到复杂问题时，TA会先尝试：", options: [{ text: "看看以前有没有类似案例，照着成熟的方法做最稳妥。", value: "S" }, { text: "觉得老办法效率太低，想试试没人用过的新工具或新思路。", value: "N" }] },
+        { id: 13, text: "在接收工作任务时，TA更希望得到：", options: [{ text: "一份详尽的操作手册，包含所有具体步骤和细节。", value: "S" }, { text: "一个清晰的最终愿景和目标，允许你自由探索实现路径。", value: "N" }] },
+        { id: 14, text: "如果TA是一名侦探，TA更像是：", options: [{ text: "细节大师，通过物证和现场痕迹锁定真凶。", value: "S" }, { text: "灵感捕手，通过洞察人物动机和行为模式破解迷案。", value: "N" }] },
+        // T/F
+        { id: 15, text: "TA的同事/朋友向TA倾诉工作/生活中的烦恼，TA首先会：", options: [{ text: "帮忙分析问题的症结所在，并提出解决方案。", value: "T" }, { text: "安慰对方的情绪，理解对方的感受。", value: "F" }] },
+        { id: 16, text: "对于“王子犯法与庶民同罪”这句话，TA的理解是：", options: [{ text: "绝对的真理，规则面前人人平等。", value: "T" }, { text: "理论上正确，但现实中需要考虑各种复杂的特殊情况。", value: "F" }] },
+        { id: 17, text: "TA和朋友在看电影的品味上差异巨大，TA会：", options: [{ text: "试图说服TA的朋友，从各个维度与他讨论电影的艺术性", value: "T" }, { text: "“萝卜青菜各有所爱”，尊重每个人的喜好。", value: "F" }] },
+        { id: 18, text: "当别人提出一个新想法时，TA的第一反应是：", options: [{ text: "寻找这个想法中可能存在的漏洞和风险。", value: "T" }, { text: "看到这个想法的闪光点和积极的一面。", value: "F" }] },
+        { id: 19, text: "和TA搭档的伙伴极其拖拉，严重影响了TA们共同的进度，TA会怎么处理？", options: [{ text: "明确说明对方影响了进度，需要对方改进，不怕把话说难听。", value: "T" }, { text: "不好意思明说，半开玩笑地催一下进度。", value: "F" }] },
+        { id: 20, text: "当TA做出一个重大的个人决定时（例如换城市），哪方面权重更大：", options: [{ text: "对所有选项进行冷静的优劣势分析。", value: "T" }, { text: "这件事带给TA的内心感受以及对重要人际关系的影响。", value: "F" }] },
+        { id: 21, text: "如果TA要给世界写一句Slogan，TA会写：", options: [{ text: "“让世界更高效、更公平。”", value: "T" }, { text: "“让世界充满爱与和平。”", value: "F" }] },
+        // J/P
+        { id: 22, text: "TA的房间或者桌面更可能是：", options: [{ text: "所有东西都分门别类地归放整齐。", value: "J" }, { text: "各种东西随意放置，但知道如何找到它们。", value: "P" }] },
+        { id: 23, text: "TA心目中完美的旅行方式是：", options: [{ text: "出发前做好详尽的攻略，把每天的行程、餐厅都安排好。", value: "J" }, { text: "每天的安排看心情和状态，喜欢“走到哪算哪”的惊喜感。", value: "P" }] },
+        { id: 24, text: "面对一个周五截止的项目，TA会：", options: [{ text: "周一就开始动手，希望能提前完成。", value: "J" }, { text: "周四晚上才开始，享受在压力下文思泉涌的感觉。", value: "P" }] },
+        { id: 25, text: "TA喜欢的生活和工作方式更倾向于：", options: [{ text: "会列计划，然后按部就班的完成。", value: "J" }, { text: "不预设，保持灵活和弹性。", value: "P" }] },
+        { id: 26, text: "对于“新的一年”，TA的态度是", options: [{ text: "制定详细的新年计划，并努力执行。", value: "J" }, { text: "顺其自然，相信最好的安排就是不安排。", value: "P" }] },
+        { id: 27, text: "和朋友约饭，TA更喜欢：", options: [{ text: "提前一周定好时间、地点和餐厅。", value: "J" }, { text: "临时起意，一个电话就约出来，吃什么随缘。", value: "P" }] },
+        { id: 28, text: "如果TA是一个导演，TA会更喜欢拍：", options: [{ text: "剧本逻辑严密、每个镜头都经过精心设计的电影。", value: "J" }, { text: "鼓励演员即兴发挥、充满不确定性的纪录片。", value: "P" }] }
+    ];
+
+    // --- 复用解读库 (保持一致性) ---
+    const typesData = {
+        "ISTJ": { name: "秩序的守护者", tags: ["#细节控", "#人形Excel", "#规矩守护者", "#靠谱担当"], social: "在社交中，TA倾向于等待别人靠近，且情绪表达内敛克制。相比于喧闹的聚会，TA更追求亲密的小圈子交流。TA身上散发着安静沉稳的场域氛围，在处理信息时习惯在沉静反思后再采取行动。", cognition: "TA是一个现实主义者，更愿意聚焦在在具体有形的细节上。TA立足现实，解决问题时极度讲求务实。比起天马行空的理论，TA更愿意相信经验导向的判断，并且在内心里高度尊重传统和既定规范。", decision: "在做决定时，TA坚持逻辑至上，讲究一视同仁的合理性。面对不完美的事物，TA习惯质疑，以批判审视的眼光寻找瑕疵。一旦确立了原则，TA会坚定立场，不会轻易妥协。", lifestyle: "TA喜欢有条理、结构化的生活和工作环境，TA喜欢提前计划，为了避免焦虑总是提前启动任务。TA享受按部就班的规律作息，能将复杂的任务拆解得井然有序，一步步稳扎稳打地走向目标。" },
+        "ISFJ": { name: "温暖的守护者", tags: ["#温柔后盾", "#细节记忆大师", "#默默付出", "#治愈系"], social: "TA习惯在社交中等待别人靠近，将真实的情绪内敛克制地藏在心底。TA偏好深度且追求亲密的互动，总是带给周围人安静沉稳的安全感，并在沉静反思中慢慢恢复精力。", cognition: "TA拥有一双善于发现生活美好的眼睛，关注具体有形的事物。TA立足现实，以讲求务实具态面对生活，信赖经验导向带来的安全感，并自然而然地尊重传统和家庭观念。", decision: "在做决定时，TA是共情驱动的。TA拥有一颗宽容慈悲的心，总是给予他人特殊的照顾。面对分歧，TA随和包容，习惯用接纳肯定的眼光看待不完美，为了人际和谐，TA总是保持态度柔和，不忍心伤害任何人。", lifestyle: "TA喜欢生活在一个系统组织好的环境中，习惯喜欢计划以应对日常。遇到任务时，TA总是提前启动，默默把一切打理好。TA享受按部就班的安定感，以井然有序的方式照顾着周围的一切。" },
+        "ESTJ": { name: "果敢的执行者", tags: ["#效率至上", "#反矫情达人", "#规则制定者", "#控场王"], social: "TA是天生的组织者，喜欢主动发起对话和拓展人脉。TA善于表达，情绪和态度都写在脸上。TA广泛合群，享受在群体中活跃参与的感觉，总是带着充满热情的能量感染并调动着周围的人。", cognition: "TA拒绝虚头巴脑的概念，只相信具体有形的数据和事实。TA立足现实，追求讲求务实的解决方案。TA高度依赖经验导向来判断对错，是社会规则和尊重传统的坚定拥护者。", decision: "TA的大脑就像一台精密的计算器，决策完全逻辑至上且追求公平合理。TA习惯质疑那些不符合规范的提议，用批判审视的眼光剔除漏洞。在坚持底线时，TA立场强硬，不被私人感情左右。", lifestyle: "TA对环境的系统组织有着极高的要求。TA喜欢计划，并且要求严格执行，做事永远提前启动以掌控全局。TA对脱轨容忍度很低，偏爱按部就班的日程，用井然有序的步骤将目标高效拿下。" },
+        "ESFJ": { name: "贴心的供给者", tags: ["#社交大管家", "#气氛组组长", "#热心肠", "#人际润滑剂"], social: "TA是聚会里的灵魂人物，总是主动发起互动。TA善于表达自己的喜爱之情，并且广泛合群，能够和不同的人打成一片。TA通过活跃参与各种活动来充电，总是散发着充满热情、让人无法拒绝的亲和力。", cognition: "TA对生活充满了细腻的感知，几乎能记住每个朋友的生日和喜好。TA立足现实，用讲求务实的方式照顾他人，依据经验导向来处理人际关系，并在内心里非常尊重传统的礼节和习俗。", decision: "TA的决定大多时候都是为了让大家开心，决策核心是共情驱动。TA具有宽容慈悲之心，对身边的人几乎有求必应。面对矛盾，TA随和包容，总是接纳肯定他人的付出，用态度柔和的沟通方式化解一切冲突。", lifestyle: "TA喜欢生活在一个有条理、系统组织的氛围里。TA喜欢计划每一次聚会和行程，为了确保万无一失总是提前启动。TA享受按部就班的稳定感，用井然有序的安排将大家的生活照顾得面面俱到。" },
+        "ISTP": { name: "冷静的巧匠", tags: ["#人狠话不多", "#野生极客", "#危机处理专家", "#冷面笑匠"], social: "TA像一个游离在喧嚣之外的观察者，习惯被动接收外界信号。TA情绪内敛克制，只在少数几个人面前展现自我。TA自带安静沉稳的气场，喜欢在沉静反思中独自拆解问题。", cognition: "TA对物理世界有着天生的直觉，关注具体有形的材质和细节。TA立足现实，解决问题讲求务实。TA排斥空洞的理论，相信经验导向和亲手操作的结果。但TA不那么尊重传统，而是具有追求原创和打破常规的特质。", decision: "TA的内核像一块理性的钢铁，决策过程逻辑至上，追求客观的公平合理。TA天生习惯质疑，对一切事物都带着批判审视的目光去寻找优化空间。一旦认定某事不符合逻辑，TA的立场强硬，不留情面。", lifestyle: "令人意外的是，高度理性的TA在生活中却非常随性自然。TA抗拒死板的安排，对未知保持开放。TA往往是压力驱动型选手，不到最后一刻不发力，享受自发冲动带来的刺激，靠着自然涌现的本能解决突发危机。" },
+        "ISFP": { name: "灵动的艺术家", tags: ["#野生艺术家", "#隐形颜控", "#随性漫游者", "#和平爱好者"], social: "TA像一只慵懒的猫，习惯被动接收他人的善意。TA的情感极度丰富但表现得内敛克制，只在亲密的伴侣或挚友面前卸下防备。TA周身环绕着安静沉稳的磁场，喜欢在沉静反思中体会内心的波澜。", cognition: "TA用五感去品尝这个世界，痴迷于具体有形的色彩、声音和质感。TA立足现实地享受当下的每一秒，生活态度讲求务实。TA相信自己身体力行的经验导向，但在审美和个人表达上，TA往往不拘泥于过去，有着追求原创的独特品味。", decision: "TA的内心世界柔软且纯粹，选择大多都是共情驱动的。TA有一颗宽容慈悲的心，随和包容他人的不同。TA讨厌冲突，总是用接纳肯定的态度面对生活，为了维护内心的和谐，TA的处事方式大多是态度柔和的。", lifestyle: "TA是一阵无法被捕捉的风，生活状态极度随性自然。TA讨厌日历上的待办事项，对下一刻保持开放。TA享受随心而动，享受每一刻自发冲动带来的小确幸，做事凭直觉和自然涌现的灵感。" },
+        "ESTP": { name: "无畏的探险家", tags: ["#人间清醒", "#肾上腺素狂徒", "#社交破冰机", "#现实玩家"], social: "TA是破冰的高手，总是主动发起互动。TA善于表达，情绪外放，在任何场合都能广泛合群。TA的大脑在活跃参与的行动中飞速运转，像一个小太阳一样，散发着充满热情、极具感染力的能量。", cognition: "TA对虚无缥缈的未来没兴趣，更关注眼前具体有形的利益和机会。TA立足现实，是一个讲求务实的人。TA凭借丰富的经验在社会中游刃有余，比起遵循旧规，TA往往展现出追求原创的变通与捷径智慧。", decision: "虽然TA看起来玩世不恭，但在关键时刻决策却逻辑至上，追求利益最大化的合理性。TA习惯质疑权威，用批判审视的眼光看待死板的规则，在谈判桌上或捍卫自己利益时，TA会表现得立场强硬。", lifestyle: "TA无法忍受被条条框框束缚，生活随性自然。TA对一切新鲜刺激的事物保持开放，是个典型的压力驱动者，越是紧急关头越能爆发。TA热爱自发冲动的冒险，行事风格是自然涌现式的见招拆招。" },
+        "ESFP": { name: "热情的表演者", tags: ["#快乐制造机", "#聚会C位", "#行走的表情包", "#活在当下"], social: "只要有TA在，场子就不会冷，TA总是主动发起各种有趣的活动。TA善于表达喜怒哀乐，广泛社交且容易合群。TA喜欢在人群中活跃参与，边说边想，用TA充满热情的灵魂点燃每一个平凡的日常。", cognition: "TA热爱生活中的一切美好，目光被具体有形的华服、美食和风景吸引。TA立足现实，享受当下，虽然偶尔也幻想，但总体上讲求务实。TA依赖快乐的经验导向，在展现自我时充满灵气，带有一种追求原创的舞台表现力。", decision: "TA的心肠很软，做决定时大多是共情驱动。TA宽容慈悲，见不得别人受委屈。TA随和包容，总是第一时间给予他人接纳肯定的反馈，哪怕遇到不开心的事情，TA也会以态度柔和的方式化解干戈。", lifestyle: "TA的生活就像一场没有剧本的即兴演出，状态随性自然。TA拒绝详细的计划，对各种邀约保持开放。TA往往在压力驱动下才去完成枯燥的任务，更享受自发冲动的惊喜，凭着自然涌现的直觉去拥抱每一天。" },
+        "INFJ": { name: "深邃的引路人", tags: ["#神秘预言家", "#精神洁癖", "#外冷内热", "#灵魂看客"], social: "TA像一本难以读懂的书，总是被动接收外界的信息。TA将深邃的情感内敛克制地封存，只和少数人建立追求亲密的灵魂连接。TA散发着一种安静沉稳的智者气息，所有的顿悟都来源于深度的沉静反思。", cognition: "TA的目光穿透了物质表象，聚焦在抽象无形的意义和隐喻上。TA的大脑充满想象，是一个被宏大概念驱动的理想主义者。TA相信直觉和理论导向的推演，一生都在追求原创且深刻的精神境界。", decision: "TA对人类的苦难有着极强的感知，决策核心是共情驱动。TA拥有菩萨般的宽容慈悲，愿意为了保护弱者而付出。尽管TA看透了人性的阴暗面，但依然选择随和包容，用接纳肯定和态度柔和的方式去疗愈这个世界。", lifestyle: "为了承载TA庞大的精神世界，TA在现实中需要高度的系统组织。TA喜欢计划，以此来获得内心的秩序感。TA习惯提前启动任务以避免慌乱，在生活作息上相对按部讲班，努力让一切井然有序地支撑TA的理想。" },
+        "INFP": { name: "理想的治愈者", tags: ["#柔软造梦师", "#赛博浪漫主义", "#共情王者", "#治愈系"], social: "TA是一个安静的倾听者，习惯被动接收他人的倾诉。TA将波澜壮阔的情绪内敛克制在心中，更渴望一对一、追求亲密的深度交流。TA习惯在安静沉稳的环境里，通过无止境的沉静反思来丰盈自己的灵魂。", cognition: "TA对世俗名利不太感冒，满脑子都是抽象无形的诗和远方。TA充满想象，经常构思“如果世界变美好会怎样”。TA是被内在价值观和概念驱动的人，相信直觉和理论导向，骨子里有着追求原创的文艺气息。", decision: "TA是毫无保留的理想主义者，选择大多基于共情驱动。TA的内心宽容慈悲，对世间的各种奇特存在都保持着随和包容。TA总是以接纳肯定的态度对待他人，即便被伤害，也多半会用态度柔和的退让来结束冲突。", lifestyle: "TA就像水一样没有固定的形状，生活状态是随性自然的。TA对未来的一切可能性保持开放，讨厌被计划框死。TA是重度的压力驱动型选手，灵感全靠自发冲动，做事风格是毫无章法却又充满艺术感的自然涌现。" },
+        "ENFJ": { name: "魅力的导师", tags: ["#灵魂导师", "#热血漫主角", "#金牌布道师", "#人类高质量发电机"], social: "TA是天生的人生导师，总是满怀热忱地主动发起交流。TA极度善于表达自己的愿景，能够广泛合群地凝聚人心。TA在活跃参与的布道中获得能量，TA充满热情的演说总能轻易点燃他人的希望。", cognition: "TA看到的不是别人现在的样子，而是他们未来的潜能。TA关注抽象无形的人性发展，大脑里充满想象。TA被一种让世界更好的概念驱动，善于运用理论导向来分析社会，并追求原创的、能够启迪他人的思想。", decision: "TA真心实意地在乎每一个人，决策过程深度共情驱动。TA展现出极大的宽容慈悲，愿意为他人的成长铺路。TA随和包容不同的声音，总是用接纳肯定的赞美去激励团队，保持着令人如沐春风的态度柔和。", lifestyle: "为了实现TA助人的宏大愿景，TA展现出了强大的系统组织能力。TA喜欢计划各种社群活动和目标，不仅自己提前启动，还会督促大家一起前进。TA希望生活在一个按部就班且井然有序的环境中，这样才能高效地散发TA的光热。" },
+        "ENFP": { name: "追梦的激励者", tags: ["#快乐小狗", "#脑洞无穷大", "#情绪价值拉满", "#三分钟热度"], social: "TA对世界充满了无穷的好奇，总是忍不住主动发起探索. TA善于表达脑子里冒出的各种奇思妙想，是一个能和任何圈子都广泛合群的社交小天才。TA享受活跃参与的快感，永远像个孩子一样充满热情。", cognition: "现实世界对TA来说太无聊了，TA着迷于抽象无形的各种可能性和隐喻。TA极度充满想象，脑洞大开，轻易被新奇的概念驱动。比起沉闷的经验，TA更喜欢理论导向的探讨，是一个纯粹的、追求原创的灵感制造机。", decision: "TA非常在乎别人的感受，所有决定几乎都是共情驱动的。TA宽容慈悲，能够理解世界上所有不可思议的存在。TA随和包容，绝不吝啬TA的接纳肯定，即使面对冒犯，TA也更倾向于用态度柔和的幽默去化解。", lifestyle: "TA的生活就是一场没有目的地的公路旅行，随性自然。TA抗拒一切束缚，对突发事件保持开放。TA是压力驱动的典型代表，享受灵感枯竭前那一刻的自发冲动，TA的高光时刻往往依赖于绝境中的自然涌现。" },
+        "INTJ": { name: "独立的战略家", tags: ["#高冷军师", "#战略大师", "#没有感情的逻辑机器", "#降维打击"], social: "TA在社交上极度克制，通常处于高冷的被动接收状态。TA的情绪高度内敛克制，只看重智力对等、追求亲密的极少数灵魂伴侣。TA周身散发着安静沉稳的压迫感，随时随地都在进行深度的沉静反思。", cognition: "TA具有一眼看透本质的超能力，关注点全在抽象无形的系统架构上。TA对未来充满想象并致力于将其实现，是一个被庞大概念驱动的战略家。TA极度信奉理论导向的推演，脑子里充满了颠覆性的、追求原创的思想。", decision: "在TA的字典里基本没有“感情用事”，一切决策逻辑至上。TA讲求冷酷但公平的合理性，天生习惯质疑一切不够完美的设计。TA以严厉的批判审视眼光看待世界，为了捍卫真理，TA的立场强硬，犹如一台精密的机器。", lifestyle: "为了实现TA的宏图霸业，TA的大脑和生活环境都需要极致的系统组织。TA是终极的喜欢计划者，战略周期可能长达十年，且总是提前启动。TA享受在按部就班的掌控中，将一切混乱变得井然有序的成就感。" },
+        "INTP": { name: "逻辑的建筑师", tags: ["#真理探索者", "#人类观察家", "#杠精学霸", "#薛定谔的懒"], social: "TA经常处于“节电模式”，在社交中被动接收，对世俗寒暄毫无兴趣。TA情感内敛克制，更喜欢在追求亲密的小圈子里聊聊宇宙规律。TA给人的感觉是安静沉稳甚至有点呆萌，其实大脑正在进行疯狂的沉静反思。", cognition: "物质世界对TA来说只是暂时的皮囊，TA真正沉迷的是抽象无形的宏观定理。TA充满想象地构建各种逻辑模型，是被纯粹的概念驱动的学者。TA相信无懈可击的理论导向，是人类思维边界上不断追求原创的拓荒者。", decision: "TA是一台无情的逻辑粉碎机，所有判断逻辑至上。TA不在乎人情世故，只讲求合理与对错。TA习惯质疑公理和权威，以挑剔的批判审视眼光寻找破绽。一旦涉及到真理层面的辩论，TA会变得异常立场强硬，寸步不让。", lifestyle: "与TA大脑里严密的逻辑相反，TA的现实生活往往极度随性自然。TA对生活琐事毫无规划，对未来的变数保持开放。TA是最典型的压力驱动者，平时看着懒散，但在死线前却能凭借自发冲动，靠着智力的自然涌现交出惊人的答卷。" },
+        "ENTJ": { name: "天生的指挥官", tags: ["#天生霸总", "#无情推土机", "#慕强王者", "#效率狂人"], social: "TA拥有极其强势的控场能力，永远是主动发起指令的那个人。TA善于表达自己的野心，并在各种高端局中广泛合群以整合资源. TA在活跃参与的战斗中越战越勇，散发着充满压迫感却又充满热情的领袖魅力。", cognition: "TA不屑于眼前的蝇头小利，目光锁定在抽象无形的宏大商业帝国或组织愿景上。TA对未来充满想象，是一个被效率和成功概念驱动的狂人。TA善于运用理论导向来制定战略，不会墨守成规，具有极强的追求原创的魄力。", decision: "在TA的世界里，阻挡目标的一切都要被扫除。TA的决策高度逻辑至上，讲究优胜劣汰的客观合理性。TA习惯质疑无能的表现，用严厉的批判审视要求团队。在商战或竞争中，TA手段果决、立场强硬，从不心慈手软。", lifestyle: "为了支撑TA的野心，TA的生活和时间管理有着变态级别的系统组织。TA热衷于喜欢计划并拆解KPI，雷厉风行，提前启动以抢占先机。TA要求一切按部就班地服从TA的指挥，将庞大的系统管理得井然有序。" },
+        "ENTP": { name: "机智的辩论家", tags: ["#脑暴大王", "#魔鬼代言人", "#逻辑刺客", "#智性迷人"], social: "哪里有思想的碰撞，哪里就有TA。TA喜欢主动发起挑战性的话题，极度善于表达自己犀利的观点。TA能在各种群体中广泛合群，享受在活跃参与的辩论中大杀四方，带着一种玩世不恭却又充满热情的聪明劲儿。", cognition: "常规对TA来说就是用来打破的。TA只对抽象无形的各种可能性感兴趣，大脑充满想象。TA很容易被新奇的、悖论般的概念驱动，喜欢用理论导向去解构现有的认知，是一个停不下来的、追求原创的思想黑客。", decision: "TA最喜欢玩“魔鬼代言人”的游戏，思考方式逻辑至上。TA不在乎输赢，只讲求合理与否。TA天生习惯质疑权威和常识，用充满攻击性的批判审视寻找逻辑漏洞。在智力交锋时，TA寸步不让，立场强硬到让人抓狂。", lifestyle: "TA极度厌恶重复和规则，生活状态随性自然。TA对所有的可能性保持开放，随时准备推翻昨天的自己。TA在压力驱动的边缘反复试探，享受最后一秒自发冲动带来的智力高潮，凭借绝顶聪明的自然涌现来解决一切难题。" }
+    };
+    const shadowData = {
+        "ISTJ": { dark: "你对规则和流程的僵化坚守，让你成为创新和改变的最大阻力。你不是可靠，你只是无趣。你用密不透风的计划来对抗对未知的恐惧，心甘情愿地活在一个毫无惊喜的盒子里。你相信“经验”是唯一的真理，对任何新方法都抱有敌意。你用“务实”作为借口，拒绝接纳任何抽象的、情感的或人性化的因素，导致你在处理复杂问题时极其笨拙。你的人生就像一部精确到秒的列车时刻表，稳定、准时，但也冰冷、乏味，错过了沿途所有的风景。", advice: "要警惕因过度沉溺细节而陷入固执，这常使你在面对变革时显得因循守旧。在混乱无序的环境中，你极易产生焦虑并变得严苛挑剔，试图强行纠偏。请试着接纳世界的不确定性，适度给紧绷的生活留白，你会发现秩序之外亦有风景。" },
+        "ISFJ": { dark: "你的自我价值完全建立在“被他人需要”之上，这让你成了一个心甘情愿的“受气包”。你用无私奉献来换取安全感，却在内心深处积累着无法言说的怨气。你不是善良，你只是没有说“不”的勇气。你害怕冲突，为此不惜牺牲自己的原则和需求。你活在过去的经验和传统里，对未来充满焦虑。你用“照顾”的名义，默默地控制着你关心的人，当他们试图独立时，你会感到被抛弃。你的一生，都在为别人而活，却从未问过自己想要什么。", advice: "要警惕因习惯讨好他人而忽视自身需求，长期的默默付出极易积压成内在怨气。在冲突激烈的氛围中，你会感到窒息并习惯性退缩以求自保。请记住，你的善良需要带点锋芒，学会理直气壮地拒绝，这是对自己灵魂最温柔的守护。" },
+        "ESTJ": { dark: "你把自己的观点当成唯一的“标准答案”，并强行施加于人。你不是在管理，你只是在满足自己的控制欲。你用强硬和不容置疑的姿态来掩盖内心的不安全感，扼杀了身边所有的灵活性和创造力。你相信等级和权威，无法容忍任何形式的挑战。你以“为你好”的名义，粗暴地干涉他人的工作和生活，却从未真正理解过他们的感受。你像一台高效运转但毫无感情的机器，赢得了所有人的服从，却失去了所有人的心。", advice: "要警惕因极度追求效率而显得冷酷，过度强硬的控制欲往往会推开身边的伙伴。面对拖延或不专业的团队时，你容易瞬间暴躁导致沟通彻底断裂。请学着在逻辑中注入人情味，真理固然重要，但温和的引导往往比铁腕的镇压更能赢得追随。" },
+        "ESFJ": { dark: "你活在别人的眼光里，为了获得群体的认可，可以毫不犹豫地放弃自我。你所谓的“合群”，不过是毫无原则地迎合多数。你对传统的固守，源于你没有能力也没有勇气去探索新的可能性。你热衷于打探和评判他人的私生活，并以社区的“道德警察”自居。你的情绪完全被他人的评价所左右，一句赞美能让你开心一整天，一句批评则能让你彻夜难眠。你努力维持着一个“完美”的社交形象，却活得像一个被提线操控的木偶，疲惫而不自知。", advice: "要警惕对外界评价的过度依赖，这会让你在流言蜚语中迅速丧失自我坐标。在不被需要或受人冷落的环境里，你极易陷入严重的自我怀疑与内耗。请先学会深情地拥抱自己，你并不需要赢得所有人的喜欢，你本身的存在就已足够闪耀。" },
+        "ISTP": { dark: "你能搞定任何机器，却处理不好自己和他人的情感。你用“独来独往”的酷炫外壳，来掩饰你在人际关系中的笨拙和懒惰。你不是冷静，你只是情感上的懒汉。你鄙视复杂的人际规则，认为那是浪费时间的虚伪游戏，但这只是因为你懒得学习。你追求即时的感官刺激，对任何需要长期投入的事情都缺乏耐心。当关系变得“麻烦”时，你的第一反应是逃跑。你像一个独行侠，但不是因为你强大，而是因为你害怕与人深度捆绑所带来的责任。", advice: "要警惕过分追求独立而演变成情感隔离，这会让你在他人眼中显得难以亲近。在枯燥且受限的刻板制度下，你容易消极怠工甚至选择人间蒸发。请尝试偶尔向外界分享你的内心世界，人际间的深度连接并非束缚，而是另一种探索能量。" },
+        "ISFP": { dark: "你所谓的“活在当下”，是你缺乏长期规划和逃避责任的完美借口。你沉溺于短暂的感官刺激，却从未创造出任何需要坚持才能完成的有价值的作品。你的“艺术性”，常常止于眼高手低和三分钟热度。你极度敏感，却又不懂得如何处理负面情绪，只能通过逃避来应对。你渴望被理解，却又懒得表达，总希望别人能“猜中”你的心思。你的人生充满了随性的美感，但也因此而缺乏方向和沉淀，像一艘没有锚的船，在感官的海洋里漫无目的地漂流。", advice: "要警惕回避冲突带来的问题堆积，过度随性的生活态度有时会让你滑向失控的边缘。面对高压竞争或严苛批评时，你的灵感火花极易因敏感而熄灭。请尝试为才华设立一个长期的锚点，坚持微小的自律，能让你的艺术表达更具穿透现实的分量。" },
+        "ESTP": { dark: "你像一只没有目标的猎犬，凭着本能追逐眼前的刺激和机会，从不思考长远的后果。你所谓的“务实”，不过是短视和投机。你总能搞定眼前的麻烦，但你本人就是那个不断制造长远麻烦的源头。你享受走在规则边缘的快感，并以此为荣，却常常因此伤害到信任你的人。你的人生是一场豪赌，享受赢的快感，却很少为输的后果做准备。当刺激消失，或者你需要为自己的冲动承担责任时，你便会毫不犹豫地奔向下一个猎物。", advice: "要警惕沉迷即时快感而忽视长远风险，这种踩死油门的行为极易导致人生失速。在缺乏刺激的重复工作中，你常会感到精神枯竭并试图破坏规矩。请学着在冲锋前慢下来预判后果，深思熟虑后的博弈，才能让你在现实游戏中赢得更久。" },
+        "ESFP": { dark: "你对关注度的渴求，让你成为一个无法忍受寂寞的、肤浅的娱乐机器。你用持续不断的喧闹来逃避任何深刻的思考和负面的情绪。当灯光熄灭、人群散去，你剩下的只有空虚。你所谓的“慷慨”和“热情”，很多时候只是为了购买他人的喜爱和关注。你活在感官的刺激中，追求即时的快乐，对未来毫无规划，像一只将头埋在沙子里的鸵鸟。你的人生是一场盛大的派对，但你只是派对上的小丑，而不是主人。", advice: "要警惕对深度话题和孤独的本能逃避，这可能使你的生活轨迹显得流于表面且难以沉淀。在严肃压抑、缺乏互动的场合中，你会因感到被世界遗忘而焦虑不安。请试着与孤独握手言和，偶尔的向内审视与深度思考，会为你本就灿烂的灵魂镀上金边。" },
+        "INFJ": { dark: "你沉浸在“拯救世界”的英雄幻想中，把自己活成了一个没人领情的悲情角色。你用一套不切实际的道德标准来衡量世界，然后因世界不符合你的想象而痛苦。你渴望深刻的灵魂连接，却又用高标准将所有人推开，然后抱怨没人能懂你。你所谓的“深刻”，不过是你过度解读和自我感动的产物。你爱上的是自己想象中的、需要被你拯救的对方，而不是真实的、有缺陷的对方。当现实戳破幻想时，你便会上演一出“被辜负”的内心大戏。", advice: "要警惕精神洁癖带来的严重内耗，这常使你在理想幻灭后变得冷漠且愤世嫉俗。在虚伪且功利的社交场中，你极易感到灵魂疲惫并选择彻底封锁内心。别试图独自背负全世界的苦难，先允许自己做一个平凡的人，接纳遗憾才是通往治愈的开始。" },
+        "INFP": { dark: "你那脆弱而“独特”的灵魂，是你逃避现实最好的挡箭牌。你宁愿在幻想的沼泽里自我怜悯，也不愿到现实世界里摔一跤。你所谓的“坚持内心”，不过是害怕失败、拒绝成长的体面说辞。任何一点批评都能让你缩回自己的保护壳里，拒绝沟通。你拥有丰富的想象力，却很少将其转化为实际的创造，因为行动就意味着可能不完美，而这是你无法承受的。你不是在守护理想，你只是在守护一个永远长不大的、害怕真实世界的自己。", advice: "要警惕因过度沉溺白日梦而脱离现实生活，对外界批评的过分敏感常让你止步不前。在冰冷且讲求逻辑的职场生存战中，你极易产生强烈的自我否定。行动是治愈幻想症的良药，请试着把宏大的理想拆解成细碎的小步，在现实中开出花来。" },
+        "ENFJ": { dark: "你对“被需要”的需求是个无底洞。你用“帮助”来换取他人的依赖和赞美，然后因精力耗尽而怨天尤人。你不是太阳，只是一个渴望掌声、缺乏自我、需要靠外界认可来定义价值的演员。你热衷于扮演“人生导师”，强行介入他人的生活，当你的“好意”被拒绝时，你会感到深受伤害。你所谓的“利他”，实际上是一种高度自私的、满足自我价值感的手段。你总是在拯救别人，却从未想过，最需要被拯救的，恰恰是你自己那颗无法独处的、空虚的心。", advice: "要警惕因过度介入他人生活而产生掌控欲，这不仅会让对方倍感压力，更会让你深陷情感倦怠。当你的满腔热忱得不到回应时，极易陷入自我价值的低谷。请学会尊重他人的命运轨迹，每个人都有自己的修行，退一步的关注反而更有力量。" },
+        "ENFP": { dark: "你的人生是一场永不落幕的“烂尾”工程。你对新事物的狂热，只是为了逃避在任何一件事上深入下去所必须付出的枯燥努力。你所谓的“自由”，是你对承诺和责任的病态恐惧。你用源源不断的“可能性”来麻痹自己，从而不必为任何一个选择负责到底。你的人际关系广而不深，善于点燃气氛，却在需要真正的情感支持时消失不见。最终，你活成了一个由无数个精彩瞬间组成的、支离破碎的集合体，却从未拥有过任何一个厚重的篇章。", advice: "要警惕注意力极度分散导致的半途而废，承诺过多却难以落实常会让你的信誉打折。在死板教条、一眼望到头的日子里，你的生命能量会迅速枯萎凋零。专注力是你通往成功的稀缺品，请学会为你的每一份热情妥善收尾，别让灵感只停留在起点。" },
+        "INTJ": { dark: "你的宏伟计划从不成功，因你根本不懂也不屑搞懂“人”这个变量。你将社交无能包装成“理性至上”，鄙视你无法理解的人类情感。你所谓的“远见”，不过是在脑中构建完美的乌托邦，以此逃避真实世界的复杂与肮脏。你对完美的病态追求，源于对失控和批评的极度恐惧，宁愿让计划烂在脑中，也不愿冒险留下不完美。这种智力上的傲慢和行动上的怯懦，注定了你只能在无人问津的角落里，抱怨世界配不上你的才华。", advice: "要警惕因自命不凡而轻视他人的情感价值，这会让你在登顶的过程中陷入彻底的孤立。在效率低下、逻辑混乱的组织中，你极易表现出令人难以忍受的刻薄。请试着理解并接纳人类的局限性，合作是更大的战略杠杆，柔软也是一种高级智慧。" },
+        "INTP": { dark: "你是个思想上的巨人，行动上的侏儒。你沉迷于构建无人问津的理论体系，以此逃避现实生活中的责任和人际。你所谓的“深度思考”，本质上是拖延症和社交恐惧症的完美结合。你从思想的象牙塔顶端俯视众生，将他们的“肤浅”作为自己不愿融入的借口。你对知识的渴求，并非为了探索真理，而是为了填补因缺乏真实生活体验而产生的空虚。你害怕犯错，所以选择永远停留在“准备阶段”，用思考无休止地逃避生活本身。", advice: "要警惕“思维巨人、行动矮子”的怪圈，过度沉溺于逻辑推演常会让你在现实琐事面前束手无策。在充满人情世故、缺乏底层逻辑的场合中，你极易神游太空。实践是检验真理的唯一标准，请试着走出纯粹的思维舒适区，去触碰那个真实有温度的世界。" },
+        "ENTJ": { dark: "你不是领导者，只是个拿着KPI当令箭的工头。为了目标，你理所当然地将他人的感受和尊严碾在脚下，并美化为“必要的牺牲”。你对控制的极度渴望，恰恰暴露了你对自身无能和失败的深层恐惧。你用不容置疑的权威来武装自己，将人视为达成目的的工具，一旦他们无法满足你的期望，便会被无情抛弃。你所谓的“强大”，不过是外强中干的虚张声势，你赢得了所有战役，却发现自己始终是个没人真心追随的孤家寡人。", advice: "要警惕攻击性过强而碾碎他人的感受，为了目标不择手段往往会让你在终点感到荒凉。在平庸且推进缓慢的环境中，你会表现出极强的压迫性从而导致众叛亲离。赢了世界却丢了人心并不划算，请学会收敛锋芒，真正的统帅懂得用温度凝聚军心。" },
+        "ENTP": { dark: "你享受推翻一切的快感，因为你没有能力建造任何东西。你的大脑是个永动机，专门制造大量半途而废的项目和被激怒的人。你所谓的“辩论”，不过是喂养你自负心和表演欲的饲料，追求的不是真理，而是驳倒对手的快感。你对新奇事物的狂热，只是为了逃避在任何一件事上深入下去所必须付出的枯燥努力。你的人生是一场永不落幕的“烂尾”工程巡展，展示了无数精彩的开头，却从未写下一个完整的结局。", advice: "要警惕为了辩论而辩论的本能冲动，在无意义的智力杠杆中虚耗精力往往得不偿失。在权威至上、不容置喙的环境中，你最容易成为那个吃亏的刺头。不是所有的逻辑漏洞都需要被当众补上，学会看破而不说破，是你进阶成熟智者的必经之路。" }
+    };
+    const easterMessages = [
+        "准备好解锁TA的性格阴暗面了吗？"
+    ];
+
+    let currentQuestionIndex = 0;
+    let scores = { E:0, I:0, S:0, N:0, T:0, F:0, J:0, P:0 };
+    let answerHistory = []; 
+    let isTransitioning = false;
+    let currentResultType = '';
+    let easterStep = 0;
+    const totalQuestions = questions.length;
+    let targetUid = '';
+    let currentAssessmentId = '';
+    let currentInviteToken = '';
+
+    function normalizeInviteCode(value) {
+        return (value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    }
+
+    function normalizeApiBase(value) {
+        const raw = (value || '').trim();
+        if (!raw) return '';
+        return raw.replace(/\/+$/, '');
+    }
+
+    function getApiBase() {
+        const queryBase = normalizeApiBase(new URLSearchParams(window.location.search).get('api_base'));
+        if (queryBase) {
+            try { localStorage.setItem('mbti_api_base', queryBase); } catch (e) {}
+            return queryBase;
+        }
+        const globalBase = normalizeApiBase(window.__MBTI_API_BASE__);
+        if (globalBase) return globalBase;
+        let stored = '';
+        try { stored = normalizeApiBase(localStorage.getItem('mbti_api_base')); } catch (e) {}
+        if (stored) return stored;
+        return window.location.protocol === 'file:' ? 'http://127.0.0.1:8787' : '';
+    }
+
+    async function consumePeerRedeemCode(code, inviteToken) {
+        try {
+            const resp = await fetch(`${getApiBase()}/api/redeem/verify-peer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, invite_token: inviteToken })
+            });
+            if (!resp.ok) {
+                return { ok: false, msg: '⚠️ 服务异常，请稍后重试' };
+            }
+            return await resp.json();
+        } catch (e) {
+            return { ok: false, msg: '⚠️ 无法连接验证服务，请联系管理员' };
+        }
+    }
+
+    async function submitPeerResult() {
+        if (!currentAssessmentId) return { ok: false, msg: '⚠️ 会话信息缺失，请重新进入他评' };
+        try {
+            const resp = await fetch(`${getApiBase()}/api/assessment/peer-submit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assessment_id: currentAssessmentId, scores })
+            });
+            if (!resp.ok) {
+                return { ok: false, msg: '⚠️ 服务异常，请稍后重试' };
+            }
+            return await resp.json();
+        } catch (e) {
+            return { ok: false, msg: '⚠️ 无法连接验证服务，请联系管理员' };
+        }
+    }
+
+    function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.innerText = message;
+        toast.className = "toast show";
+        setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+    }
+
+    function toTaPerspective(text) {
+        if (!text) return '';
+        return text
+            .replace(/你们/g, 'TA们')
+            .replace(/你的/g, 'TA的')
+            .replace(/你/g, 'TA');
+    }
+
+    function getMirrorReportUrl(assessmentId) {
+        const basePath = window.location.pathname.replace(/[^/]*$/, '');
+        // 三号页面入口采用 MBTI-test.html 的 assessment 模式（镜像->个人可切换）
+        const feedbackUrl = new URL(`${basePath}MBTI-test.html`, window.location.origin);
+        feedbackUrl.searchParams.set('assessment', assessmentId);
+        const apiBase = getApiBase();
+        if (apiBase) feedbackUrl.searchParams.set('api_base', apiBase);
+        return feedbackUrl.toString();
+    }
+
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const assessmentFromUrl = (urlParams.get('assessment') || '').trim();
+        if (assessmentFromUrl) {
+            // 兜底：若误进入他评页但链接里带有assessment，自动回到三号页面
+            window.location.replace(getMirrorReportUrl(assessmentFromUrl));
+            return;
+        }
+        currentInviteToken = (urlParams.get('invite_token') || '').trim();
+        targetUid = normalizeInviteCode(urlParams.get('uid'));
+        const inviteInput = document.getElementById('invite-code-input');
+        if (inviteInput && targetUid) inviteInput.value = targetUid;
+        if (inviteInput) {
+            inviteInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') useInviteCode();
+            });
+        }
+    }
+
+    async function goToInstruction() {
+        if (!targetUid && !currentInviteToken) {
+            showToast("⚠️ 请先输入邀请码，或使用邀请链接进入");
+            return;
+        }
+        const consume = await consumePeerRedeemCode(targetUid, currentInviteToken);
+        if (!consume.ok) {
+            showToast(consume.msg || "⚠️ 兑换码验证失败");
+            return;
+        }
+        currentAssessmentId = consume.assessment_id || '';
+        targetUid = normalizeInviteCode(consume.invite_code || targetUid);
+        currentInviteToken = consume.invite_token || currentInviteToken;
+        document.getElementById('welcome-screen').style.display = 'none';
+        document.getElementById('instruction-screen').style.display = 'block';
+        window.scrollTo(0, 0);
+    }
+
+    function useInviteCode() {
+        const input = document.getElementById('invite-code-input');
+        const code = normalizeInviteCode(input ? input.value : '');
+        if (!code) {
+            showToast("⚠️ 邀请码不能为空");
+            return;
+        }
+        targetUid = code;
+        currentInviteToken = '';
+        if (input) input.value = code;
+        goToInstruction();
+    }
+    function startQuiz() {
+        document.getElementById('instruction-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'block';
+        window.scrollTo(0, 0);
+        renderQuestion();
+    }
+    function getDimensionByQuestionId(questionId) {
+        if (questionId >= 1 && questionId <= 7) return { left: 'E', right: 'I' };
+        if (questionId >= 8 && questionId <= 14) return { left: 'S', right: 'N' };
+        if (questionId >= 15 && questionId <= 21) return { left: 'T', right: 'F' };
+        if (questionId >= 22 && questionId <= 28) return { left: 'J', right: 'P' };
+        return null;
+    }
+
+    function applyAnswerToScores(questionId, optionKey, delta) {
+        const dimension = getDimensionByQuestionId(questionId);
+        if (!dimension) return;
+        const target = optionKey === 'A' ? dimension.left : dimension.right;
+        scores[target] += delta;
+    }
+
+    function renderQuestion() {
+        isTransitioning = false;
+        const q = questions[currentQuestionIndex];
+        const container = document.getElementById('question-container');
+        
+        const progress = ((currentQuestionIndex) / totalQuestions) * 100;
+        document.getElementById('progress-fill').style.width = `${progress}%`;
+        document.getElementById('progress-icon').style.left = `${progress}%`;
+
+        const prevBtn = document.getElementById('prev-btn');
+        if (currentQuestionIndex > 0) {
+            prevBtn.style.display = 'block';
+        } else {
+            prevBtn.style.display = 'none';
+        }
+
+        container.innerHTML = `
+            <div class="question-number">Q${q.id}</div>
+            <div class="question-text fade-in">${q.text}</div>
+            <div class="options-container fade-in">
+                <div class="option-btn" onclick="selectOption('A')">A. ${q.options[0].text}</div>
+                <div class="option-btn" onclick="selectOption('B')">B. ${q.options[1].text}</div>
+            </div>
+        `;
+    }
+
+    function selectOption(optionKey) {
+        if (isTransitioning) return;
+        isTransitioning = true;
+        const q = questions[currentQuestionIndex];
+        answerHistory.push(optionKey);
+        applyAnswerToScores(q.id, optionKey, 1);
+        
+        setTimeout(() => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < totalQuestions) { renderQuestion(); } else { showResult(true); }
+        }, 250);
+    }
+
+    function prevQuestion() {
+        if (isTransitioning) return;
+        if (currentQuestionIndex > 0) {
+            const lastOption = answerHistory.pop();
+            if (lastOption) {
+                const lastQuestionId = questions[currentQuestionIndex - 1].id;
+                applyAnswerToScores(lastQuestionId, lastOption, -1);
+            }
+            currentQuestionIndex--;
+            renderQuestion();
+        }
+    }
+
+    // --- 新增：生成反馈链接逻辑 ---
+    function generateFeedbackLink() {
+        if (!currentAssessmentId) {
+            showToast("⚠️ 未找到邀请人信息，请返回重新通过链接或邀请码进入");
+            return;
+        }
+        const feedbackUrl = getMirrorReportUrl(currentAssessmentId);
+
+        const tempTextArea = document.createElement('textarea');
+        tempTextArea.value = feedbackUrl;
+        document.body.appendChild(tempTextArea);
+        tempTextArea.select();
+        let success = false;
+        try { success = document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(tempTextArea);
+
+        showToast(success ? "✅ 反馈链接已复制，快发给TA吧！" : "⚠️ 复制失败，请手动截图分享");
+    }
+
+    async function showResult(shouldSubmit = true) {
+        document.getElementById('quiz-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        window.scrollTo(0, 0);
+        
+        const resultType = 
+            (scores.E >= scores.I ? 'E' : 'I') +
+            (scores.S >= scores.N ? 'S' : 'N') +
+            (scores.T >= scores.F ? 'T' : 'F') +
+            (scores.J >= scores.P ? 'J' : 'P');
+        currentResultType = resultType;
+
+        document.getElementById('result-type').innerText = resultType;
+        const typeData = typesData[resultType];
+        document.getElementById('result-name').innerText = typeData.name;
+        const tagContainer = document.getElementById('result-tags');
+        tagContainer.innerHTML = typeData.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+        
+        document.getElementById('content-social').innerHTML = parseMarkdown(typeData.social);
+        document.getElementById('content-cognition').innerHTML = parseMarkdown(typeData.cognition);
+        document.getElementById('content-decision').innerHTML = parseMarkdown(typeData.decision);
+        document.getElementById('content-lifestyle').innerHTML = parseMarkdown(typeData.lifestyle);
+
+        resetEasterEgg();
+        renderCharts();
+
+        if (!shouldSubmit) return;
+        const submitResp = await submitPeerResult();
+        if (!submitResp.ok) {
+            showToast(submitResp.msg || "⚠️ 他评提交失败，请稍后重试");
+            return;
+        }
+        showToast("✅ 他评已提交，可将反馈链接发给TA查看镜像报告");
+    }
+    
+    function parseMarkdown(text) { return text.replace(/\*\*/g, ''); }
+    
+    function renderCharts() {
+        const chartData = [
+            { left: 'E', right: 'I', leftVal: scores.E, rightVal: scores.I, total: 7 },
+            { left: 'S', right: 'N', leftVal: scores.S, rightVal: scores.N, total: 7 },
+            { left: 'T', right: 'F', leftVal: scores.T, rightVal: scores.F, total: 7 },
+            { left: 'J', right: 'P', leftVal: scores.J, rightVal: scores.P, total: 7 }
+        ];
+
+        const container = document.getElementById('chart-container');
+        container.innerHTML = '';
+
+        chartData.forEach(item => {
+            const leftPercent = Math.max(0, Math.min(100, Math.round((item.leftVal / item.total) * 100)));
+            const rightPercent = 100 - leftPercent;
+
+            let leftClass = "color-blue";
+            let rightClass = "color-pink";
+            
+            if (item.leftVal > item.rightVal) { rightClass = "color-gray"; }
+            else if (item.rightVal > item.leftVal) { leftClass = "color-gray"; }
+
+            const html = `
+                <div class="bar-group">
+                    <div class="bar-labels">
+                        <span class="label-left">${item.left} ${leftPercent}%</span>
+                        <span class="label-right">${item.right} ${rightPercent}%</span>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill-left ${leftClass}" style="width: ${leftPercent}%"></div>
+                        <div class="bar-divider" style="left: ${leftPercent}%"></div>
+                        <div class="bar-fill-right ${rightClass}" style="width: ${rightPercent}%"></div>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += html;
+        });
+    }
+
+    function resetEasterEgg() {
+        easterStep = 0;
+        const card = document.getElementById('easter-egg-card');
+        const text = document.getElementById('easter-egg-text');
+        const trigger = document.getElementById('advice-trigger');
+        const panel = document.getElementById('advice-panel');
+        const arrow = document.getElementById('advice-arrow');
+        if (!card || !text) return;
+        card.classList.remove('flipped');
+        text.innerText = easterMessages[0];
+        if (trigger) trigger.style.display = 'none';
+        if (panel) panel.classList.remove('open');
+        if (arrow) arrow.classList.remove('open');
+        const shadow = shadowData[currentResultType] || { dark: '暂无内容', advice: '暂无内容' };
+        const darkEl = document.getElementById('dark-side-text');
+        const adviceEl = document.getElementById('advice-text');
+        if (darkEl) darkEl.innerText = toTaPerspective(shadow.dark);
+        if (adviceEl) adviceEl.innerText = toTaPerspective(shadow.advice);
+        syncEasterCardHeight();
+    }
+
+    function handleEasterEggClick() {
+        const card = document.getElementById('easter-egg-card');
+        const text = document.getElementById('easter-egg-text');
+        
+        card.classList.add('active');
+        setTimeout(() => card.classList.remove('active'), 100);
+
+        if (!card || !text || card.classList.contains('flipped')) return;
+        if (easterStep < easterMessages.length - 1) {
+            easterStep++;
+            text.classList.remove('text-pop');
+            void text.offsetWidth;
+            text.classList.add('text-pop');
+            text.innerText = easterMessages[easterStep];
+            syncEasterCardHeight();
+            return;
+        }
+        card.classList.add('flipped');
+        syncEasterCardHeight();
+        const trigger = document.getElementById('advice-trigger');
+        if (trigger) trigger.style.display = 'block';
+    }
+
+    function syncEasterCardHeight() {
+        const inner = document.querySelector('#easter-egg-card .easter-card-inner');
+        const front = document.querySelector('#easter-egg-card .easter-front');
+        const back = document.querySelector('#easter-egg-card .easter-back');
+        if (!inner || !front || !back) return;
+        // 为保持设计统一性，此处高度由CSS固定控制
+    }
+
+    function toggleAdvice(event) {
+        if (event) event.stopPropagation();
+        const panel = document.getElementById('advice-panel');
+        const arrow = document.getElementById('advice-arrow');
+        if (!panel || !arrow) return;
+        const isOpen = panel.classList.contains('open');
+        if (isOpen) {
+            panel.classList.remove('open');
+            arrow.classList.remove('open');
+        } else {
+            panel.classList.add('open');
+            arrow.classList.add('open');
+        }
+    }
+
+    document.addEventListener('dblclick', function(event) { event.preventDefault(); }, { passive: false });
+</script>
+
+</body>
+</html>
