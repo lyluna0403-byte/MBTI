@@ -1549,6 +1549,14 @@
         return raw.replace(/\/+$/, '');
     }
 
+    function inferApiBaseByHostname() {
+        const host = (window.location.hostname || '').toLowerCase();
+        if (!host) return '';
+        if (host === 'mbti.planttree.top') return 'https://api.planttree.top';
+        if (host.startsWith('mbti.')) return `${window.location.protocol}//api.${host.slice(5)}`;
+        return '';
+    }
+
     function getApiBase() {
         const queryBase = normalizeApiBase(new URLSearchParams(window.location.search).get('api_base'));
         if (queryBase) {
@@ -1560,6 +1568,8 @@
         let stored = '';
         try { stored = normalizeApiBase(localStorage.getItem('mbti_api_base')); } catch (e) {}
         if (stored) return stored;
+        const inferred = inferApiBaseByHostname();
+        if (inferred) return inferred;
         return window.location.protocol === 'file:' ? 'http://127.0.0.1:8787' : '';
     }
 
@@ -1696,9 +1706,14 @@
         if (el) el.innerText = currentUid || '--------';
     }
 
-    function setLastAssessmentId(assessmentId) {
+    function setOwnerAssessmentId(assessmentId) {
         if (!assessmentId) return;
-        try { localStorage.setItem('mbti_last_assessment', assessmentId); } catch (e) {}
+        try { localStorage.setItem('mbti_owner_assessment', assessmentId); } catch (e) {}
+    }
+
+    function getOwnerAssessmentId() {
+        try { return (localStorage.getItem('mbti_owner_assessment') || '').trim(); } catch (e) {}
+        return '';
     }
 
     function shouldForceRetest() {
@@ -1837,7 +1852,6 @@
         currentAssessmentId = status.assessment_id || assessmentId;
         currentUid = normalizeInviteCode(status.code || '');
         currentInviteToken = status.invite_token || '';
-        setLastAssessmentId(currentAssessmentId);
         updateInviteCodeDisplay();
 
         if (!status.self_submitted || !status.self_scores) return false;
@@ -1857,7 +1871,10 @@
         const forceRetest = shouldForceRetest();
 
         if (forceRetest) {
-            try { localStorage.removeItem('mbti_last_assessment'); } catch (e) {}
+            try {
+                localStorage.removeItem('mbti_owner_assessment');
+                localStorage.removeItem('mbti_last_assessment');
+            } catch (e) {}
         }
 
         const existingAssessment = (urlParams.get('assessment') || '').trim();
@@ -1868,10 +1885,9 @@
 
         const uidFromUrl = normalizeInviteCode(urlParams.get('uid'));
         if (!uidFromUrl && !forceRetest) {
-            let lastAssessment = '';
-            try { lastAssessment = (localStorage.getItem('mbti_last_assessment') || '').trim(); } catch (e) {}
-            if (lastAssessment) {
-                const opened = await tryOpenExistingAssessment(lastAssessment);
+            const ownerAssessment = getOwnerAssessmentId();
+            if (ownerAssessment) {
+                const opened = await tryOpenExistingAssessment(ownerAssessment);
                 if (opened) return;
             }
         }
@@ -1901,7 +1917,7 @@
         currentUid = normalizeInviteCode(consume.code || code);
         currentAssessmentId = consume.assessment_id || '';
         currentInviteToken = consume.invite_token || '';
-        setLastAssessmentId(currentAssessmentId);
+        setOwnerAssessmentId(currentAssessmentId);
         if (input) input.value = code;
         updateInviteCodeDisplay();
 
@@ -2076,7 +2092,7 @@
 
         currentUid = normalizeInviteCode(submitResp.invite_code || currentUid);
         currentInviteToken = submitResp.invite_token || currentInviteToken;
-        setLastAssessmentId(currentAssessmentId);
+        setOwnerAssessmentId(currentAssessmentId);
         updateInviteCodeDisplay();
 
         if (submitResp.peer_submitted && submitResp.peer_scores) {

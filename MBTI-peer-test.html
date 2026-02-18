@@ -924,6 +924,14 @@
         return raw.replace(/\/+$/, '');
     }
 
+    function inferApiBaseByHostname() {
+        const host = (window.location.hostname || '').toLowerCase();
+        if (!host) return '';
+        if (host === 'mbti.planttree.top') return 'https://api.planttree.top';
+        if (host.startsWith('mbti.')) return `${window.location.protocol}//api.${host.slice(5)}`;
+        return '';
+    }
+
     function getApiBase() {
         const queryBase = normalizeApiBase(new URLSearchParams(window.location.search).get('api_base'));
         if (queryBase) {
@@ -935,6 +943,8 @@
         let stored = '';
         try { stored = normalizeApiBase(localStorage.getItem('mbti_api_base')); } catch (e) {}
         if (stored) return stored;
+        const inferred = inferApiBaseByHostname();
+        if (inferred) return inferred;
         return window.location.protocol === 'file:' ? 'http://127.0.0.1:8787' : '';
     }
 
