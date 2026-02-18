@@ -1199,6 +1199,10 @@
         }
 
         .action-area { text-align: center; margin-top: 2.5rem; }
+        .report-view-animating {
+            pointer-events: none;
+            will-change: transform, opacity;
+        }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -1533,6 +1537,7 @@
     let currentDetailType = '';
     let currentDetailUseTaPerspective = false;
     let submitConfirmResolver = null;
+    let isReportViewAnimating = false;
 
     function normalizeInviteCode(value) {
         return (value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -1769,21 +1774,61 @@
 
     function showMirrorView() {
         if (!hasComparisonReport) return;
-        setReportView('mirror');
-        const comparison = document.getElementById('comparison-container');
-        if (comparison) comparison.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        transitionReportView('mirror');
     }
 
     function showSelfReportView() {
-        setReportView('self-report');
-        const personalTop = document.getElementById('personal-report-sections');
-        if (personalTop) personalTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        transitionReportView('self-report');
     }
 
     function showPeerReportView() {
-        setReportView('peer-report');
-        const personalTop = document.getElementById('personal-report-sections');
-        if (personalTop) personalTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        transitionReportView('peer-report');
+    }
+
+    async function transitionReportView(nextMode) {
+        if (isReportViewAnimating) return;
+        if (currentReportView === nextMode) {
+            const cardTop = document.querySelector('#result-screen .card');
+            if (cardTop) cardTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+
+        const card = document.querySelector('#result-screen .card');
+        if (!card || typeof card.animate !== 'function') {
+            setReportView(nextMode);
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+
+        isReportViewAnimating = true;
+        card.classList.add('report-view-animating');
+
+        try {
+            await card.animate(
+                [
+                    { opacity: 1, filter: 'blur(0px)', transform: 'translateY(0) scale(1)' },
+                    { opacity: 0.3, filter: 'blur(10px)', transform: 'translateY(4px) scale(0.992)' }
+                ],
+                { duration: 170, easing: 'cubic-bezier(0.4, 0.0, 0.2, 1)', fill: 'forwards' }
+            ).finished;
+        } catch (e) {}
+
+        setReportView(nextMode);
+        card.scrollIntoView({ behavior: 'auto', block: 'start' });
+
+        try {
+            await card.animate(
+                [
+                    { opacity: 0.32, filter: 'blur(12px)', transform: 'translateY(-6px) scale(0.992)' },
+                    { opacity: 1, filter: 'blur(0px)', transform: 'translateY(0) scale(1)' }
+                ],
+                { duration: 300, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards' }
+            ).finished;
+        } catch (e) {}
+
+        card.style.filter = '';
+        card.classList.remove('report-view-animating');
+        isReportViewAnimating = false;
     }
 
     async function tryOpenExistingAssessment(assessmentId) {
