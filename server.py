@@ -15,6 +15,15 @@ CODES_FILE = os.path.join(BASE_DIR, "redeem_codes.json")
 ASSESSMENTS_FILE = os.path.join(BASE_DIR, "assessment_sessions.json")
 SUPER_CODE = "INLIGHT"
 LOCK = Lock()
+SENSITIVE_EXACT_PATHS = {
+    "/redeem_codes.json",
+    "/assessment_sessions.json",
+    "/render.yaml",
+    "/vercel.json",
+    "/server.py",
+    "/redeem_codes.txt",
+}
+SENSITIVE_EXTENSIONS = (".json", ".py", ".yaml", ".yml", ".md", ".txt", ".log")
 
 
 def now_iso():
@@ -124,6 +133,10 @@ def find_latest_open_super_assessment(assessments):
 
 
 class Handler(SimpleHTTPRequestHandler):
+    def list_directory(self, path):
+        self.send_error(403, "Directory listing is disabled")
+        return None
+
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
@@ -153,10 +166,8 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
 
-        if parsed.path == "/api/redeem/codes":
-            with LOCK:
-                codes = load_json(CODES_FILE)
-            self._send_json(200, make_resp(True, extra={"codes": sorted(codes.keys()), "super_code": SUPER_CODE}))
+        if parsed.path == "/api/health":
+            self._send_json(200, make_resp(True, "ok", {"service": "mbti-api"}))
             return
 
         if parsed.path == "/api/assessment/status":
@@ -187,7 +198,32 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json(200, make_resp(True, "ok", payload))
             return
 
+        if parsed.path == "/":
+            self._send_json(200, make_resp(True, "MBTI API is running"))
+            return
+
+        if self._is_blocked_static_path(parsed.path):
+            self.send_error(403, "Forbidden")
+            return
+
         return super().do_GET()
+
+    def _is_blocked_static_path(self, path):
+        clean = (path or "").split("?", 1)[0].strip()
+        if not clean:
+            return False
+        lower = clean.lower()
+
+        if lower in SENSITIVE_EXACT_PATHS:
+            return True
+        if "/.git" in lower or lower.startswith("/.git"):
+            return True
+        if lower.startswith("/.") or "/." in lower:
+            return True
+        for ext in SENSITIVE_EXTENSIONS:
+            if lower.endswith(ext):
+                return True
+        return False
 
     def do_POST(self):
         parsed = urlparse(self.path)
