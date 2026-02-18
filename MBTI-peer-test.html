@@ -938,12 +938,12 @@
         return window.location.protocol === 'file:' ? 'http://127.0.0.1:8787' : '';
     }
 
-    async function consumePeerRedeemCode(code, inviteToken) {
+    async function consumePeerRedeemCode(code, inviteToken, assessmentId = '') {
         try {
             const resp = await fetch(`${getApiBase()}/api/redeem/verify-peer`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code, invite_token: inviteToken })
+                body: JSON.stringify({ code, invite_token: inviteToken, assessment_id: assessmentId || currentAssessmentId || '' })
             });
             if (!resp.ok) {
                 return { ok: false, msg: '⚠️ 服务异常，请稍后重试' };
@@ -1025,17 +1025,12 @@
 
     window.onload = async function() {
         const urlParams = new URLSearchParams(window.location.search);
-        const assessmentFromUrl = (urlParams.get('assessment') || '').trim();
-        if (assessmentFromUrl) {
-            // 兜底：若误进入他评页但链接里带有assessment，自动回到三号页面
-            window.location.replace(getMirrorReportUrl(assessmentFromUrl));
-            return;
-        }
+        currentAssessmentId = (urlParams.get('assessment_id') || '').trim();
         currentInviteToken = (urlParams.get('invite_token') || '').trim();
         targetUid = normalizeInviteCode(urlParams.get('uid'));
 
         if (currentInviteToken || targetUid) {
-            const consume = await consumePeerRedeemCode(targetUid, currentInviteToken);
+            const consume = await consumePeerRedeemCode(targetUid, currentInviteToken, currentAssessmentId);
             if (consume.ok && consume.assessment_id) {
                 currentAssessmentId = consume.assessment_id;
                 targetUid = normalizeInviteCode(consume.invite_code || targetUid);
@@ -1069,7 +1064,7 @@
             showToast("⚠️ 请输入邀请码");
             return;
         }
-        const consume = await consumePeerRedeemCode(targetUid, currentInviteToken);
+        const consume = await consumePeerRedeemCode(targetUid, currentInviteToken, currentAssessmentId);
         if (!consume.ok) {
             showToast(consume.msg || "⚠️ 兑换码验证失败");
             return;

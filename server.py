@@ -400,6 +400,7 @@ class Handler(SimpleHTTPRequestHandler):
     def handle_verify_peer(self, payload):
         code = normalize_code(payload.get("code"))
         invite_token = (payload.get("invite_token") or "").strip()
+        assessment_id_from_payload = (payload.get("assessment_id") or "").strip()
 
         with LOCK:
             codes = load_json(CODES_FILE)
@@ -408,7 +409,13 @@ class Handler(SimpleHTTPRequestHandler):
             assessment_id = None
             item = None
 
-            if invite_token:
+            if assessment_id_from_payload:
+                assessment_id = assessment_id_from_payload
+                item = assessments.get(assessment_id)
+                if item and invite_token and item.get("invite_token") != invite_token:
+                    self._send_json(200, make_resp(False, "⚠️ 邀请链接无效，请让TA重新分享"))
+                    return
+            elif invite_token:
                 assessment_id, item = find_assessment_by_token(assessments, invite_token)
             elif code:
                 if code != SUPER_CODE and code not in codes:
