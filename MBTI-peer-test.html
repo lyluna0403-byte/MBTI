@@ -592,6 +592,77 @@
             opacity: 1;
             bottom: 50px;
         }
+        .confirm-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 120;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(20, 30, 42, 0.35);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        .confirm-modal.show {
+            display: flex;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .confirm-panel {
+            width: min(480px, 92vw);
+            background: linear-gradient(135deg, rgba(255,255,255,0.88), rgba(240,247,255,0.8));
+            border: 1px solid rgba(255,255,255,0.75);
+            border-radius: 20px;
+            box-shadow: 0 24px 48px rgba(35, 60, 88, 0.22);
+            padding: 1.25rem 1.2rem 1.05rem;
+            transform: translateY(4px) scale(0.98);
+            opacity: 0;
+            animation: confirmRise 0.22s ease-out forwards;
+        }
+        .confirm-title {
+            font-size: 1.06rem;
+            color: #2f4157;
+            font-weight: 700;
+            margin-bottom: 0.45rem;
+        }
+        .confirm-desc {
+            font-size: 0.92rem;
+            color: #4f6175;
+            line-height: 1.65;
+        }
+        .confirm-actions {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.65rem;
+        }
+        .confirm-btn {
+            border: none;
+            border-radius: 999px;
+            padding: 0.55rem 1.15rem;
+            font-family: 'Noto Serif SC', serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .confirm-btn.cancel {
+            color: #3f5872;
+            background: rgba(188, 210, 231, 0.92);
+            box-shadow: 0 8px 18px rgba(116, 150, 182, 0.22);
+        }
+        .confirm-btn.ok {
+            color: #fff;
+            background: linear-gradient(135deg, #588dad, #4b77a2);
+            box-shadow: 0 10px 20px rgba(70, 111, 150, 0.3);
+        }
+        .confirm-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.02);
+        }
+        @keyframes confirmRise {
+            from { opacity: 0; transform: translateY(8px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
 
         .action-area { text-align: center; margin-top: 2.5rem; }
         
@@ -617,9 +688,8 @@
             <p style="text-align: center; margin-top: 15px; color: var(--color-blue-deep); font-weight: bold;">👉 迫不及待了，让我来揭秘真实的TA！</p>
         </div>
         
-        <button class="btn" onclick="goToInstruction()">开启他评之旅</button>
         <div class="code-entry">
-            <p>如果你是通过邀请码进入，请在这里输入邀请码：</p>
+            <p>请输入邀请码</p>
             <input id="invite-code-input" class="code-input" type="text" placeholder="请输入8位邀请码" maxlength="20">
             <br>
             <button class="btn-invite" onclick="useInviteCode()">使用邀请码开始</button>
@@ -743,6 +813,17 @@
 
 </div>
 
+<div id="submit-confirm-modal" class="confirm-modal" aria-hidden="true">
+    <div class="confirm-panel" role="dialog" aria-modal="true" aria-labelledby="submit-confirm-title">
+        <div id="submit-confirm-title" class="confirm-title">确认提交</div>
+        <div class="confirm-desc">提交后不可返回，是否确认提交？</div>
+        <div class="confirm-actions">
+            <button id="submit-confirm-cancel" class="confirm-btn cancel" type="button">取消</button>
+            <button id="submit-confirm-ok" class="confirm-btn ok" type="button">确认提交</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // --- 他评视角题库 ---
     const questions = [
@@ -831,6 +912,7 @@
     let targetUid = '';
     let currentAssessmentId = '';
     let currentInviteToken = '';
+    let submitConfirmResolver = null;
 
     function normalizeInviteCode(value) {
         return (value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -889,6 +971,16 @@
         }
     }
 
+    async function fetchAssessmentStatus(assessmentId) {
+        try {
+            const resp = await fetch(`${getApiBase()}/api/assessment/status?assessment_id=${encodeURIComponent(assessmentId)}`);
+            if (!resp.ok) return { ok: false, msg: '⚠️ 服务异常，请稍后重试' };
+            return await resp.json();
+        } catch (e) {
+            return { ok: false, msg: '⚠️ 无法连接验证服务，请联系管理员' };
+        }
+    }
+
     function showToast(message) {
         const toast = document.getElementById('toast');
         toast.innerText = message;
@@ -914,7 +1006,24 @@
         return feedbackUrl.toString();
     }
 
-    window.onload = function() {
+    async function tryOpenExistingPeerReport(assessmentId) {
+        const status = await fetchAssessmentStatus(assessmentId);
+        if (!status.ok || !status.peer_submitted || !status.peer_scores) return false;
+        currentAssessmentId = status.assessment_id || assessmentId;
+        targetUid = normalizeInviteCode(status.invite_code || status.code || '');
+        currentInviteToken = status.invite_token || '';
+        scores = { ...status.peer_scores };
+        document.getElementById('welcome-screen').style.display = 'none';
+        await showResult(false);
+        return true;
+    }
+
+    function setLastPeerAssessmentId(assessmentId) {
+        if (!assessmentId) return;
+        try { localStorage.setItem('mbti_peer_last_assessment', assessmentId); } catch (e) {}
+    }
+
+    window.onload = async function() {
         const urlParams = new URLSearchParams(window.location.search);
         const assessmentFromUrl = (urlParams.get('assessment') || '').trim();
         if (assessmentFromUrl) {
@@ -924,6 +1033,28 @@
         }
         currentInviteToken = (urlParams.get('invite_token') || '').trim();
         targetUid = normalizeInviteCode(urlParams.get('uid'));
+
+        if (currentInviteToken || targetUid) {
+            const consume = await consumePeerRedeemCode(targetUid, currentInviteToken);
+            if (consume.ok && consume.assessment_id) {
+                currentAssessmentId = consume.assessment_id;
+                targetUid = normalizeInviteCode(consume.invite_code || targetUid);
+                currentInviteToken = consume.invite_token || currentInviteToken;
+                setLastPeerAssessmentId(currentAssessmentId);
+                if (consume.already_submitted) {
+                    const opened = await tryOpenExistingPeerReport(currentAssessmentId);
+                    if (opened) return;
+                }
+            }
+        } else {
+            let lastPeerAssessment = '';
+            try { lastPeerAssessment = (localStorage.getItem('mbti_peer_last_assessment') || '').trim(); } catch (e) {}
+            if (lastPeerAssessment) {
+                const opened = await tryOpenExistingPeerReport(lastPeerAssessment);
+                if (opened) return;
+            }
+        }
+
         const inviteInput = document.getElementById('invite-code-input');
         if (inviteInput && targetUid) inviteInput.value = targetUid;
         if (inviteInput) {
@@ -935,7 +1066,7 @@
 
     async function goToInstruction() {
         if (!targetUid && !currentInviteToken) {
-            showToast("⚠️ 请先输入邀请码，或使用邀请链接进入");
+            showToast("⚠️ 请输入邀请码");
             return;
         }
         const consume = await consumePeerRedeemCode(targetUid, currentInviteToken);
@@ -946,6 +1077,13 @@
         currentAssessmentId = consume.assessment_id || '';
         targetUid = normalizeInviteCode(consume.invite_code || targetUid);
         currentInviteToken = consume.invite_token || currentInviteToken;
+        setLastPeerAssessmentId(currentAssessmentId);
+
+        if (consume.already_submitted) {
+            const opened = await tryOpenExistingPeerReport(currentAssessmentId);
+            if (opened) return;
+        }
+
         document.getElementById('welcome-screen').style.display = 'none';
         document.getElementById('instruction-screen').style.display = 'block';
         window.scrollTo(0, 0);
@@ -1010,9 +1148,43 @@
         `;
     }
 
-    function selectOption(optionKey) {
+    function showSubmitConfirmModal() {
+        return new Promise(resolve => {
+            const modal = document.getElementById('submit-confirm-modal');
+            submitConfirmResolver = resolve;
+            if (modal) {
+                modal.classList.add('show');
+                modal.setAttribute('aria-hidden', 'false');
+            } else {
+                resolve(false);
+            }
+        });
+    }
+
+    function closeSubmitConfirmModal(result) {
+        const modal = document.getElementById('submit-confirm-modal');
+        if (modal) {
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        if (submitConfirmResolver) {
+            submitConfirmResolver(result);
+            submitConfirmResolver = null;
+        }
+    }
+
+    async function selectOption(optionKey) {
         if (isTransitioning) return;
         isTransitioning = true;
+
+        if (currentQuestionIndex === totalQuestions - 1) {
+            const confirmed = await showSubmitConfirmModal();
+            if (!confirmed) {
+                isTransitioning = false;
+                return;
+            }
+        }
+
         const q = questions[currentQuestionIndex];
         answerHistory.push(optionKey);
         applyAnswerToScores(q.id, optionKey, 1);
@@ -1087,6 +1259,7 @@
             showToast(submitResp.msg || "⚠️ 他评提交失败，请稍后重试");
             return;
         }
+        setLastPeerAssessmentId(currentAssessmentId);
         showToast("✅ 他评已提交，可将反馈链接发给TA查看镜像报告");
     }
     
@@ -1198,6 +1371,17 @@
     }
 
     document.addEventListener('dblclick', function(event) { event.preventDefault(); }, { passive: false });
+    document.getElementById('submit-confirm-cancel')?.addEventListener('click', () => closeSubmitConfirmModal(false));
+    document.getElementById('submit-confirm-ok')?.addEventListener('click', () => closeSubmitConfirmModal(true));
+    document.getElementById('submit-confirm-modal')?.addEventListener('click', (event) => {
+        if (event.target.id === 'submit-confirm-modal') closeSubmitConfirmModal(false);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            const modal = document.getElementById('submit-confirm-modal');
+            if (modal && modal.classList.contains('show')) closeSubmitConfirmModal(false);
+        }
+    });
 </script>
 
 </body>

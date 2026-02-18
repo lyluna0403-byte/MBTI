@@ -433,7 +433,15 @@ class Handler(SimpleHTTPRequestHandler):
                 return
 
             if item.get("peer_submitted"):
-                self._send_json(200, make_resp(False, "⚠️ 该邀请已完成他评，每位用户仅可邀请1人他评"))
+                invite_code = item.get("code", "")
+                self._send_json(200, make_resp(True, "ok", {
+                    "assessment_id": assessment_id,
+                    "invite_code": invite_code,
+                    "invite_token": item.get("invite_token", ""),
+                    "self_type": item.get("self_type", ""),
+                    "peer_type": item.get("peer_type", ""),
+                    "already_submitted": True,
+                }))
                 return
 
             invite_code = item.get("code", "")
