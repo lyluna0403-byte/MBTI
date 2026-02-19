@@ -132,6 +132,36 @@ def find_latest_open_super_assessment(assessments):
     return aid, item
 
 
+def find_best_assessment_for_code(assessments, code):
+    """
+    当兑换码映射的 assessment_id 失效或滞后时，兜底回溯该兑换码关联会话。
+    优先级：
+    1) 已完成自评且未完成他评（可直接进入他评）
+    2) 已完成自评（已完成他评也允许用于查看结果）
+    """
+    open_candidates = []
+    submitted_candidates = []
+    for aid, item in assessments.items():
+        if item.get("code") != code:
+            continue
+        if not item.get("self_submitted"):
+            continue
+        updated = item.get("updated_at", "")
+        submitted_candidates.append((updated, aid, item))
+        if not item.get("peer_submitted"):
+            open_candidates.append((updated, aid, item))
+
+    if open_candidates:
+        open_candidates.sort(key=lambda x: x[0], reverse=True)
+        _, aid, item = open_candidates[0]
+        return aid, item
+    if submitted_candidates:
+        submitted_candidates.sort(key=lambda x: x[0], reverse=True)
+        _, aid, item = submitted_candidates[0]
+        return aid, item
+    return None, None
+
+
 class Handler(SimpleHTTPRequestHandler):
     def list_directory(self, path):
         self.send_error(403, "Directory listing is disabled")
@@ -430,6 +460,15 @@ class Handler(SimpleHTTPRequestHandler):
                     rec = codes[code]
                     assessment_id = rec.get("assessment_id")
                     item = assessments.get(assessment_id) if assessment_id else None
+                    # 兜底：若映射会话为空或尚未完成自评，回溯同兑换码最近有效会话
+                    if (not item) or (not item.get("self_submitted")):
+                        fallback_id, fallback_item = find_best_assessment_for_code(assessments, code)
+                        if fallback_id and fallback_item:
+                            assessment_id, item = fallback_id, fallback_item
+                            rec["assessment_id"] = fallback_id
+                            rec["updated_at"] = now_iso()
+                            codes[code] = rec
+                            save_json(CODES_FILE, codes)
 
             if not item or not assessment_id:
                 self._send_json(200, make_resp(False, "⚠️ 未找到对应邀请，请确认邀请码或链接"))

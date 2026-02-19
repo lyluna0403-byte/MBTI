@@ -1011,6 +1011,7 @@
         // 三号页面入口采用 MBTI-test.html 的 assessment 模式（镜像->个人可切换）
         const feedbackUrl = new URL(`${basePath}MBTI-test.html`, window.location.origin);
         feedbackUrl.searchParams.set('assessment', assessmentId);
+        feedbackUrl.searchParams.set('report', 'mirror');
         const apiBase = getApiBase();
         if (apiBase) feedbackUrl.searchParams.set('api_base', apiBase);
         return feedbackUrl.toString();
