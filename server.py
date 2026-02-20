@@ -6,7 +6,9 @@ import string
 from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8787"))
@@ -27,10 +29,18 @@ SENSITIVE_EXACT_PATHS = {
     "/redeem_codes.txt",
 }
 SENSITIVE_EXTENSIONS = (".json", ".py", ".yaml", ".yml", ".md", ".txt", ".log")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+SUPABASE_CODES_TABLE = os.getenv("SUPABASE_CODES_TABLE", "mbti_redeem_codes").strip()
+SUPABASE_ASSESSMENTS_TABLE = os.getenv("SUPABASE_ASSESSMENTS_TABLE", "mbti_assessment_sessions").strip()
 
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+
+def use_supabase():
+    return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
 
 
 def gen_code(length=8):
@@ -43,6 +53,142 @@ def gen_code(length=8):
 
 def gen_id(prefix):
     return f"{prefix}_{secrets.token_urlsafe(10)}"
+
+
+def supabase_request(method, path, query=None, payload=None, extra_headers=None):
+    if not use_supabase():
+        raise RuntimeError("Supabase is not configured")
+
+    query = query or {}
+    url = f"{SUPABASE_URL}/rest/v1/{path}"
+    if query:
+        url = f"{url}?{urlencode(query, doseq=True)}"
+
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+    }
+    if extra_headers:
+        headers.update(extra_headers)
+
+    body = None if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = Request(url=url, data=body, headers=headers, method=method.upper())
+    try:
+        with urlopen(req, timeout=15) as resp:
+            raw = resp.read().decode("utf-8")
+            return json.loads(raw) if raw else {}
+    except HTTPError as e:
+        detail = e.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(f"Supabase HTTPError {e.code}: {detail}") from e
+    except URLError as e:
+        raise RuntimeError(f"Supabase URLError: {e}") from e
+
+
+def load_codes_from_supabase():
+    rows = supabase_request(
+        "GET",
+        SUPABASE_CODES_TABLE,
+        query={
+            "select": "code,self_used,peer_used,total_used,assessment_id,updated_at",
+            "limit": "10000",
+        },
+    )
+    data = {}
+    for row in rows or []:
+        code = (row.get("code") or "").strip().upper()
+        if not code:
+            continue
+        data[code] = {
+            "self_used": int(row.get("self_used") or 0),
+            "peer_used": int(row.get("peer_used") or 0),
+            "total_used": int(row.get("total_used") or 0),
+            "assessment_id": row.get("assessment_id"),
+            "updated_at": row.get("updated_at") or now_iso(),
+        }
+    return data
+
+
+def save_codes_to_supabase(data):
+    rows = []
+    for code, rec in (data or {}).items():
+        rows.append({
+            "code": code,
+            "self_used": int(rec.get("self_used") or 0),
+            "peer_used": int(rec.get("peer_used") or 0),
+            "total_used": int(rec.get("total_used") or 0),
+            "assessment_id": rec.get("assessment_id"),
+            "updated_at": rec.get("updated_at") or now_iso(),
+        })
+    if not rows:
+        return
+    supabase_request(
+        "POST",
+        SUPABASE_CODES_TABLE,
+        payload=rows,
+        extra_headers={
+            "Prefer": "resolution=merge-duplicates,return=minimal",
+        },
+    )
+
+
+def load_assessments_from_supabase():
+    rows = supabase_request(
+        "GET",
+        SUPABASE_ASSESSMENTS_TABLE,
+        query={
+            "select": "assessment_id,code,super,invite_token,self_submitted,peer_submitted,self_scores,peer_scores,self_type,peer_type,created_at,updated_at",
+            "limit": "10000",
+        },
+    )
+    data = {}
+    for row in rows or []:
+        aid = (row.get("assessment_id") or "").strip()
+        if not aid:
+            continue
+        data[aid] = {
+            "code": row.get("code") or "",
+            "super": bool(row.get("super")),
+            "invite_token": row.get("invite_token") or "",
+            "self_submitted": bool(row.get("self_submitted")),
+            "peer_submitted": bool(row.get("peer_submitted")),
+            "self_scores": row.get("self_scores"),
+            "peer_scores": row.get("peer_scores"),
+            "self_type": row.get("self_type") or "",
+            "peer_type": row.get("peer_type") or "",
+            "created_at": row.get("created_at") or now_iso(),
+            "updated_at": row.get("updated_at") or now_iso(),
+        }
+    return data
+
+
+def save_assessments_to_supabase(data):
+    rows = []
+    for aid, item in (data or {}).items():
+        rows.append({
+            "assessment_id": aid,
+            "code": item.get("code") or "",
+            "super": bool(item.get("super")),
+            "invite_token": item.get("invite_token") or "",
+            "self_submitted": bool(item.get("self_submitted")),
+            "peer_submitted": bool(item.get("peer_submitted")),
+            "self_scores": item.get("self_scores"),
+            "peer_scores": item.get("peer_scores"),
+            "self_type": item.get("self_type") or "",
+            "peer_type": item.get("peer_type") or "",
+            "created_at": item.get("created_at") or now_iso(),
+            "updated_at": item.get("updated_at") or now_iso(),
+        })
+    if not rows:
+        return
+    supabase_request(
+        "POST",
+        SUPABASE_ASSESSMENTS_TABLE,
+        payload=rows,
+        extra_headers={
+            "Prefer": "resolution=merge-duplicates,return=minimal",
+        },
+    )
 
 
 def normalize_code(raw):
@@ -63,6 +209,32 @@ def type_from_scores(scores):
 
 
 def init_files():
+    if use_supabase():
+        try:
+            codes = load_json(CODES_FILE)
+            if not codes:
+                if os.path.exists(SEED_CODES_FILE):
+                    save_json(CODES_FILE, load_json(SEED_CODES_FILE))
+                else:
+                    data = {}
+                    while len(data) < 200:
+                        code = gen_code(8)
+                        data[code] = {
+                            "self_used": 0,
+                            "peer_used": 0,
+                            "total_used": 0,
+                            "assessment_id": None,
+                            "updated_at": now_iso(),
+                        }
+                    save_json(CODES_FILE, data)
+
+            assessments = load_json(ASSESSMENTS_FILE)
+            if assessments is None:
+                save_json(ASSESSMENTS_FILE, {})
+        except Exception as e:
+            raise RuntimeError(f"Supabase init failed: {e}") from e
+        return
+
     os.makedirs(DATA_DIR, exist_ok=True)
 
     if not os.path.exists(CODES_FILE):
@@ -89,11 +261,23 @@ def init_files():
 
 
 def load_json(path):
+    if use_supabase():
+        if path == CODES_FILE:
+            return load_codes_from_supabase()
+        if path == ASSESSMENTS_FILE:
+            return load_assessments_from_supabase()
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def save_json(path, data):
+    if use_supabase():
+        if path == CODES_FILE:
+            save_codes_to_supabase(data)
+            return
+        if path == ASSESSMENTS_FILE:
+            save_assessments_to_supabase(data)
+            return
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -208,7 +392,10 @@ class Handler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
 
         if parsed.path == "/api/health":
-            self._send_json(200, make_resp(True, "ok", {"service": "mbti-api"}))
+            self._send_json(200, make_resp(True, "ok", {
+                "service": "mbti-api",
+                "storage": "supabase" if use_supabase() else "file",
+            }))
             return
 
         if parsed.path == "/api/assessment/status":
