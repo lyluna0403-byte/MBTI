@@ -1034,6 +1034,44 @@
         try { localStorage.setItem('mbti_peer_last_assessment', assessmentId); } catch (e) {}
     }
 
+    function getPeerReportCacheKey(code) {
+        const normalized = normalizeInviteCode(code);
+        return normalized ? `mbti_peer_report_${normalized}` : '';
+    }
+
+    function savePeerReportCache(code, payload) {
+        const key = getPeerReportCacheKey(code);
+        if (!key || !payload) return;
+        try { localStorage.setItem(key, JSON.stringify(payload)); } catch (e) {}
+    }
+
+    function loadPeerReportCache(code) {
+        const key = getPeerReportCacheKey(code);
+        if (!key) return null;
+        try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !parsed.scores) return null;
+            return parsed;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function tryOpenCachedPeerReport(code, tip = '') {
+        const cache = loadPeerReportCache(code);
+        if (!cache || !cache.scores) return false;
+        targetUid = normalizeInviteCode(code || cache.code || targetUid);
+        currentAssessmentId = (cache.assessment_id || currentAssessmentId || '').trim();
+        currentInviteToken = (cache.invite_token || currentInviteToken || '').trim();
+        scores = { ...cache.scores };
+        document.getElementById('welcome-screen').style.display = 'none';
+        await showResult(false);
+        if (tip) showToast(tip);
+        return true;
+    }
+
     window.onload = async function() {
         const urlParams = new URLSearchParams(window.location.search);
         currentAssessmentId = (urlParams.get('assessment_id') || '').trim();
@@ -1077,6 +1115,7 @@
         }
         const consume = await consumePeerRedeemCode(targetUid, currentInviteToken, currentAssessmentId);
         if (!consume.ok) {
+            if (targetUid && await tryOpenCachedPeerReport(targetUid, "✅ 已打开本机保存的他评报告")) return;
             showToast(consume.msg || "⚠️ 兑换码验证失败");
             return;
         }
@@ -1088,6 +1127,7 @@
         if (consume.already_submitted) {
             const opened = await tryOpenExistingPeerReport(currentAssessmentId);
             if (opened) return;
+            if (targetUid && await tryOpenCachedPeerReport(targetUid, "✅ 已打开本机保存的他评报告")) return;
         }
 
         document.getElementById('welcome-screen').style.display = 'none';
@@ -1266,6 +1306,14 @@
             return;
         }
         setLastPeerAssessmentId(currentAssessmentId);
+        savePeerReportCache(targetUid, {
+            code: targetUid,
+            assessment_id: currentAssessmentId,
+            invite_token: currentInviteToken,
+            scores: { ...scores },
+            type: currentResultType,
+            saved_at: Date.now()
+        });
         showToast("✅ 他评已提交，可将反馈链接发给TA查看镜像报告");
     }
     

@@ -1738,6 +1738,46 @@
         return '';
     }
 
+    function getSelfReportCacheKey(code) {
+        const normalized = normalizeInviteCode(code);
+        return normalized ? `mbti_self_report_${normalized}` : '';
+    }
+
+    function saveSelfReportCache(code, payload) {
+        const key = getSelfReportCacheKey(code);
+        if (!key || !payload) return;
+        try { localStorage.setItem(key, JSON.stringify(payload)); } catch (e) {}
+    }
+
+    function loadSelfReportCache(code) {
+        const key = getSelfReportCacheKey(code);
+        if (!key) return null;
+        try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !parsed.scores) return null;
+            return parsed;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function tryOpenCachedSelfReport(code, tip) {
+        const cache = loadSelfReportCache(code);
+        if (!cache || !cache.scores) return false;
+        currentUid = normalizeInviteCode(code || cache.code || currentUid);
+        currentAssessmentId = (cache.assessment_id || currentAssessmentId || '').trim();
+        currentInviteToken = (cache.invite_token || currentInviteToken || '').trim();
+        scores = { ...cache.scores };
+        document.getElementById('welcome-screen').style.display = 'none';
+        showResult(false);
+        setReportView('self-report');
+        updateInviteCodeDisplay();
+        if (tip) showToast(tip);
+        return true;
+    }
+
     function shouldForceRetest() {
         const params = new URLSearchParams(window.location.search);
         const value = (params.get('restart') || params.get('force_quiz') || '').trim().toLowerCase();
@@ -1937,6 +1977,7 @@
         }
         const consume = await consumeSelfRedeemCode(code);
         if (!consume.ok) {
+            if (tryOpenCachedSelfReport(code, "✅ 已打开本机保存的自评报告")) return;
             showToast(consume.msg || "⚠️ 兑换码验证失败");
             return;
         }
@@ -1956,6 +1997,9 @@
                 setReportView('self-report');
                 return;
             }
+            if (tryOpenCachedSelfReport(currentUid, "✅ 已打开本机保存的自评报告")) return;
+        } else if (tryOpenCachedSelfReport(currentUid, "✅ 已打开本机保存的自评报告")) {
+            return;
         }
 
         document.getElementById('welcome-screen').style.display = 'none';
@@ -2117,6 +2161,14 @@
         currentUid = normalizeInviteCode(submitResp.invite_code || currentUid);
         currentInviteToken = submitResp.invite_token || currentInviteToken;
         setOwnerAssessmentId(currentAssessmentId);
+        saveSelfReportCache(currentUid, {
+            code: currentUid,
+            assessment_id: currentAssessmentId,
+            invite_token: currentInviteToken,
+            scores: currentSelfScores,
+            type: currentSelfType,
+            saved_at: Date.now()
+        });
         updateInviteCodeDisplay();
 
         if (submitResp.peer_submitted && submitResp.peer_scores) {
