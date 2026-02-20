@@ -11,8 +11,11 @@ from urllib.parse import parse_qs, urlparse
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8787"))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CODES_FILE = os.path.join(BASE_DIR, "redeem_codes.json")
-ASSESSMENTS_FILE = os.path.join(BASE_DIR, "assessment_sessions.json")
+DATA_DIR = os.getenv("DATA_DIR", BASE_DIR)
+CODES_FILE = os.path.join(DATA_DIR, "redeem_codes.json")
+ASSESSMENTS_FILE = os.path.join(DATA_DIR, "assessment_sessions.json")
+SEED_CODES_FILE = os.path.join(BASE_DIR, "redeem_codes.json")
+SEED_ASSESSMENTS_FILE = os.path.join(BASE_DIR, "assessment_sessions.json")
 SUPER_CODE = "INLIGHT"
 LOCK = Lock()
 SENSITIVE_EXACT_PATHS = {
@@ -60,21 +63,29 @@ def type_from_scores(scores):
 
 
 def init_files():
+    os.makedirs(DATA_DIR, exist_ok=True)
+
     if not os.path.exists(CODES_FILE):
-        data = {}
-        while len(data) < 200:
-            code = gen_code(8)
-            data[code] = {
-                "self_used": 0,
-                "peer_used": 0,
-                "total_used": 0,
-                "assessment_id": None,
-                "updated_at": now_iso(),
-            }
-        save_json(CODES_FILE, data)
+        if os.path.exists(SEED_CODES_FILE):
+            save_json(CODES_FILE, load_json(SEED_CODES_FILE))
+        else:
+            data = {}
+            while len(data) < 200:
+                code = gen_code(8)
+                data[code] = {
+                    "self_used": 0,
+                    "peer_used": 0,
+                    "total_used": 0,
+                    "assessment_id": None,
+                    "updated_at": now_iso(),
+                }
+            save_json(CODES_FILE, data)
 
     if not os.path.exists(ASSESSMENTS_FILE):
-        save_json(ASSESSMENTS_FILE, {})
+        if os.path.exists(SEED_ASSESSMENTS_FILE):
+            save_json(ASSESSMENTS_FILE, load_json(SEED_ASSESSMENTS_FILE))
+        else:
+            save_json(ASSESSMENTS_FILE, {})
 
 
 def load_json(path):
