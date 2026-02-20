@@ -445,9 +445,14 @@ class Handler(SimpleHTTPRequestHandler):
                 if item and invite_token and item.get("invite_token") != invite_token:
                     self._send_json(200, make_resp(False, "⚠️ 邀请链接无效，请让TA重新分享"))
                     return
+                # assessment_id 失效时，不应直接失败，继续尝试 invite_token/code 兜底
+                if not item:
+                    assessment_id = None
             elif invite_token:
                 assessment_id, item = find_assessment_by_token(assessments, invite_token)
-            elif code:
+            if (not item) and invite_token:
+                assessment_id, item = find_assessment_by_token(assessments, invite_token)
+            if (not item) and code:
                 if code != SUPER_CODE and code not in codes:
                     self._send_json(200, make_resp(False, "⚠️ 邀请码无效，请联系TA重新分享"))
                     return

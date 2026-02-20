@@ -1715,6 +1715,7 @@
         const currentFile = (window.location.pathname.split('/').pop() || '').toLowerCase();
         const peerFile = currentFile === 'mbti_test.html' ? 'mbti_peer_test.html' : 'MBTI-peer-test.html';
         const inviteUrl = new URL(getSiblingPageUrl(peerFile));
+        if (currentUid) inviteUrl.searchParams.set('uid', currentUid);
         inviteUrl.searchParams.set('invite_token', currentInviteToken);
         if (currentAssessmentId) inviteUrl.searchParams.set('assessment_id', currentAssessmentId);
         const apiBase = getApiBase();
