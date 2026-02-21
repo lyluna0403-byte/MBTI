@@ -147,6 +147,7 @@
 
     const state={adminKey:sessionStorage.getItem('mbti_admin_key')||''};
     const $ = (id)=>document.getElementById(id);
+    const qs = (sel)=>document.querySelector(sel);
     const panel=$('panel'), loginRow=$('loginRow'), afterLogin=$('afterLogin');
     const loginMsg=$('loginMsg');
 
@@ -192,8 +193,14 @@
     }
 
     function renderSessions(rows){
-      const tb=$('#sessionsTable tbody');
-      tb.innerHTML=(rows||[]).map(r=>`
+      const tb=qs('#sessionsTable tbody');
+      const list=(rows||[]);
+      if(!tb) return;
+      if(!list.length){
+        tb.innerHTML='<tr><td colspan="7" style="color:#7a90a6">暂无会话记录</td></tr>';
+        return;
+      }
+      tb.innerHTML=list.map(r=>`
         <tr>
           <td class="mono">${r.assessment_id||''}</td>
           <td class="mono">${r.code||''}</td>
@@ -207,8 +214,14 @@
     }
 
     function renderCodes(rows){
-      const tb=$('#codesTable tbody');
-      tb.innerHTML=(rows||[]).map(r=>`
+      const tb=qs('#codesTable tbody');
+      const list=(rows||[]);
+      if(!tb) return;
+      if(!list.length){
+        tb.innerHTML='<tr><td colspan="6" style="color:#7a90a6">暂无兑换码记录</td></tr>';
+        return;
+      }
+      tb.innerHTML=list.map(r=>`
         <tr>
           <td class="mono">${r.code||''}</td>
           <td>${r.self_used||0}</td>
@@ -296,4 +309,3 @@
   </script>
 </body>
 </html>
-
