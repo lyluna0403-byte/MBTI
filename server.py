@@ -3,6 +3,8 @@ import json
 import os
 import secrets
 import string
+import csv
+import io
 from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from threading import Lock
@@ -33,6 +35,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 SUPABASE_CODES_TABLE = os.getenv("SUPABASE_CODES_TABLE", "mbti_redeem_codes").strip()
 SUPABASE_ASSESSMENTS_TABLE = os.getenv("SUPABASE_ASSESSMENTS_TABLE", "mbti_assessment_sessions").strip()
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "").strip()
 
 
 def now_iso():
@@ -137,7 +140,7 @@ def load_assessments_from_supabase():
         "GET",
         SUPABASE_ASSESSMENTS_TABLE,
         query={
-            "select": "assessment_id,code,super,invite_token,self_submitted,peer_submitted,self_scores,peer_scores,self_type,peer_type,created_at,updated_at",
+            "select": "assessment_id,code,super,invite_token,self_submitted,peer_submitted,self_scores,peer_scores,self_answers,peer_answers,self_result,peer_result,self_type,peer_type,created_at,updated_at",
             "limit": "10000",
         },
     )
@@ -154,6 +157,10 @@ def load_assessments_from_supabase():
             "peer_submitted": bool(row.get("peer_submitted")),
             "self_scores": row.get("self_scores"),
             "peer_scores": row.get("peer_scores"),
+            "self_answers": row.get("self_answers"),
+            "peer_answers": row.get("peer_answers"),
+            "self_result": row.get("self_result"),
+            "peer_result": row.get("peer_result"),
             "self_type": row.get("self_type") or "",
             "peer_type": row.get("peer_type") or "",
             "created_at": row.get("created_at") or now_iso(),
@@ -174,6 +181,10 @@ def save_assessments_to_supabase(data):
             "peer_submitted": bool(item.get("peer_submitted")),
             "self_scores": item.get("self_scores"),
             "peer_scores": item.get("peer_scores"),
+            "self_answers": item.get("self_answers"),
+            "peer_answers": item.get("peer_answers"),
+            "self_result": item.get("self_result"),
+            "peer_result": item.get("peer_result"),
             "self_type": item.get("self_type") or "",
             "peer_type": item.get("peer_type") or "",
             "created_at": item.get("created_at") or now_iso(),
@@ -302,6 +313,67 @@ def sanitize_scores(raw_scores):
     return out
 
 
+def sanitize_answers(raw_answers):
+    if raw_answers is None:
+        return None
+    if not isinstance(raw_answers, dict):
+        return None
+    out = {}
+    for key, val in raw_answers.items():
+        qkey = str(key).strip().upper()
+        if not qkey.startswith("Q"):
+            continue
+        option = str(val).strip().upper()
+        if option not in ("A", "B"):
+            continue
+        out[qkey] = option
+    return out
+
+
+def build_axis_payload(scores):
+    pairs = [("E", "I"), ("S", "N"), ("T", "F"), ("J", "P")]
+    axis = []
+    for left, right in pairs:
+        lv = int(scores.get(left, 0) or 0)
+        rv = int(scores.get(right, 0) or 0)
+        total = lv + rv
+        if total <= 0:
+            total = 7
+        left_pct = int(round((lv / total) * 100))
+        right_pct = 100 - left_pct
+        axis.append({
+            "left": left,
+            "right": right,
+            "left_count": lv,
+            "right_count": rv,
+            "left_pct": left_pct,
+            "right_pct": right_pct,
+            "total": total,
+        })
+    return axis
+
+
+def sanitize_result(raw_result, fallback_scores):
+    safe_scores = sanitize_scores(fallback_scores) or {}
+    if not isinstance(raw_result, dict):
+        return {
+            "type": type_from_scores(safe_scores),
+            "scores": safe_scores,
+            "axis": build_axis_payload(safe_scores),
+        }
+    result_scores = sanitize_scores(raw_result.get("scores")) or safe_scores
+    raw_type = str(raw_result.get("type") or "").strip().upper()
+    result_type = raw_type if len(raw_type) == 4 else type_from_scores(result_scores)
+    axis = raw_result.get("axis")
+    if not isinstance(axis, list):
+        axis = build_axis_payload(result_scores)
+    return {
+        "type": result_type,
+        "scores": result_scores,
+        "axis": axis,
+    }
+
+
 def find_assessment_by_token(assessments, invite_token):
     for aid, item in assessments.items():
         if item.get("invite_token") == invite_token:
@@ -365,7 +437,7 @@ class Handler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type,X-Admin-Key")
         super().end_headers()
 
     def _send_json(self, status, payload):
@@ -383,6 +455,87 @@ class Handler(SimpleHTTPRequestHandler):
             return json.loads(raw.decode("utf-8"))
         except Exception:
             return None
+
+    def _send_csv(self, status, filename, rows):
+        if not rows:
+            rows = []
+        output = io.StringIO()
+        if rows:
+            fieldnames = list(rows[0].keys())
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        body = ("\ufeff" + output.getvalue()).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/csv; charset=utf-8")
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _require_admin(self):
+        if not ADMIN_PASSWORD:
+            self._send_json(200, make_resp(False, "管理员后台未启用，请先在 Render 设置 ADMIN_PASSWORD"))
+            return False
+        header_key = (self.headers.get("X-Admin-Key") or "").strip()
+        if header_key != ADMIN_PASSWORD:
+            self._send_json(200, make_resp(False, "管理员鉴权失败，请重新登录"))
+            return False
+        return True
+
+    def _to_int(self, value, default=0):
+        try:
+            return int(value)
+        except Exception:
+            return default
+
+    def _flatten_answers(self, answers):
+        out = {}
+        src = answers if isinstance(answers, dict) else {}
+        for i in range(1, 29):
+            out[f"Q{i}"] = src.get(f"Q{i}", "")
+        return out
+
+    def _assessment_rows_for_export(self, assessments):
+        rows = []
+        for aid, item in assessments.items():
+            self_ans = self._flatten_answers(item.get("self_answers"))
+            peer_ans = self._flatten_answers(item.get("peer_answers"))
+            row = {
+                "assessment_id": aid,
+                "code": item.get("code", ""),
+                "invite_token": item.get("invite_token", ""),
+                "self_submitted": bool(item.get("self_submitted")),
+                "peer_submitted": bool(item.get("peer_submitted")),
+                "self_type": item.get("self_type", ""),
+                "peer_type": item.get("peer_type", ""),
+                "self_scores": json.dumps(item.get("self_scores"), ensure_ascii=False),
+                "peer_scores": json.dumps(item.get("peer_scores"), ensure_ascii=False),
+                "self_result": json.dumps(item.get("self_result"), ensure_ascii=False),
+                "peer_result": json.dumps(item.get("peer_result"), ensure_ascii=False),
+                "created_at": item.get("created_at", ""),
+                "updated_at": item.get("updated_at", ""),
+            }
+            for i in range(1, 29):
+                row[f"self_q{i}"] = self_ans.get(f"Q{i}", "")
+                row[f"peer_q{i}"] = peer_ans.get(f"Q{i}", "")
+            rows.append(row)
+        rows.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
+        return rows
+
+    def _code_rows_for_export(self, codes):
+        rows = []
+        for code, item in codes.items():
+            rows.append({
+                "code": code,
+                "self_used": int(item.get("self_used", 0) or 0),
+                "peer_used": int(item.get("peer_used", 0) or 0),
+                "total_used": int(item.get("total_used", 0) or 0),
+                "assessment_id": item.get("assessment_id", ""),
+                "updated_at": item.get("updated_at", ""),
+            })
+        rows.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
+        return rows
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -419,11 +572,111 @@ class Handler(SimpleHTTPRequestHandler):
                 "peer_submitted": bool(item.get("peer_submitted")),
                 "self_scores": item.get("self_scores"),
                 "peer_scores": item.get("peer_scores"),
+                "self_answers": item.get("self_answers"),
+                "peer_answers": item.get("peer_answers"),
+                "self_result": item.get("self_result"),
+                "peer_result": item.get("peer_result"),
                 "self_type": item.get("self_type", ""),
                 "peer_type": item.get("peer_type", ""),
                 "updated_at": item.get("updated_at", ""),
             }
             self._send_json(200, make_resp(True, "ok", payload))
+            return
+
+        if parsed.path == "/api/admin/summary":
+            if not self._require_admin():
+                return
+            with LOCK:
+                codes = load_json(CODES_FILE)
+                assessments = load_json(ASSESSMENTS_FILE)
+            total_codes = len(codes)
+            used_codes = sum(1 for _, rec in codes.items() if int(rec.get("total_used", 0) or 0) > 0)
+            total_sessions = len(assessments)
+            self_done = sum(1 for _, s in assessments.items() if s.get("self_submitted"))
+            peer_done = sum(1 for _, s in assessments.items() if s.get("peer_submitted"))
+            self._send_json(200, make_resp(True, "ok", {
+                "total_codes": total_codes,
+                "used_codes": used_codes,
+                "unused_codes": max(total_codes - used_codes, 0),
+                "total_sessions": total_sessions,
+                "self_done": self_done,
+                "peer_done": peer_done,
+                "pending_peer": max(self_done - peer_done, 0),
+            }))
+            return
+
+        if parsed.path == "/api/admin/codes":
+            if not self._require_admin():
+                return
+            query = parse_qs(parsed.query)
+            keyword = normalize_code((query.get("keyword") or [""])[0])
+            limit = max(1, min(2000, self._to_int((query.get("limit") or ["200"])[0], 200)))
+            with LOCK:
+                codes = load_json(CODES_FILE)
+            rows = self._code_rows_for_export(codes)
+            if keyword:
+                rows = [r for r in rows if keyword in r.get("code", "")]
+            self._send_json(200, make_resp(True, "ok", {
+                "rows": rows[:limit],
+                "total": len(rows),
+            }))
+            return
+
+        if parsed.path == "/api/admin/sessions":
+            if not self._require_admin():
+                return
+            query = parse_qs(parsed.query)
+            keyword = normalize_code((query.get("keyword") or [""])[0])
+            status = (query.get("status") or ["all"])[0].strip().lower()
+            limit = max(1, min(5000, self._to_int((query.get("limit") or ["200"])[0], 200)))
+            with LOCK:
+                assessments = load_json(ASSESSMENTS_FILE)
+            rows = self._assessment_rows_for_export(assessments)
+            if keyword:
+                rows = [r for r in rows if keyword in normalize_code(r.get("code", "")) or keyword in (r.get("assessment_id", "") or "")]
+            if status == "pending_peer":
+                rows = [r for r in rows if r.get("self_submitted") and not r.get("peer_submitted")]
+            elif status == "peer_done":
+                rows = [r for r in rows if r.get("peer_submitted")]
+            elif status == "self_done":
+                rows = [r for r in rows if r.get("self_submitted")]
+            self._send_json(200, make_resp(True, "ok", {
+                "rows": rows[:limit],
+                "total": len(rows),
+            }))
+            return
+
+        if parsed.path == "/api/admin/export/codes.csv":
+            if not self._require_admin():
+                return
+            query = parse_qs(parsed.query)
+            keyword = normalize_code((query.get("keyword") or [""])[0])
+            with LOCK:
+                codes = load_json(CODES_FILE)
+            rows = self._code_rows_for_export(codes)
+            if keyword:
+                rows = [r for r in rows if keyword in r.get("code", "")]
+            self._send_csv(200, "mbti_redeem_codes.csv", rows)
+            return
+
+        if parsed.path == "/api/admin/export/sessions.csv":
+            if not self._require_admin():
+                return
+            query = parse_qs(parsed.query)
+            keyword = normalize_code((query.get("keyword") or [""])[0])
+            status = (query.get("status") or ["all"])[0].strip().lower()
+            with LOCK:
+                assessments = load_json(ASSESSMENTS_FILE)
+            rows = self._assessment_rows_for_export(assessments)
+            if keyword:
+                rows = [r for r in rows if keyword in normalize_code(r.get("code", "")) or keyword in (r.get("assessment_id", "") or "")]
+            if status == "pending_peer":
+                rows = [r for r in rows if r.get("self_submitted") and not r.get("peer_submitted")]
+            elif status == "peer_done":
+                rows = [r for r in rows if r.get("peer_submitted")]
+            elif status == "self_done":
+                rows = [r for r in rows if r.get("self_submitted")]
+            self._send_csv(200, "mbti_assessment_sessions.csv", rows)
             return
 
         if parsed.path == "/":
@@ -476,6 +729,17 @@ class Handler(SimpleHTTPRequestHandler):
             self.handle_peer_submit(payload)
             return
 
+        if parsed.path == "/api/admin/login":
+            password = (payload.get("password") or "").strip()
+            if not ADMIN_PASSWORD:
+                self._send_json(200, make_resp(False, "管理员后台未启用，请先在 Render 设置 ADMIN_PASSWORD"))
+                return
+            if password != ADMIN_PASSWORD:
+                self._send_json(200, make_resp(False, "密码错误"))
+                return
+            self._send_json(200, make_resp(True, "ok"))
+            return
+
         self._send_json(404, make_resp(False, "Not Found"))
 
     def handle_verify_self(self, payload):
@@ -503,6 +767,10 @@ class Handler(SimpleHTTPRequestHandler):
                     "peer_submitted": False,
                     "self_scores": None,
                     "peer_scores": None,
+                    "self_answers": None,
+                    "peer_answers": None,
+                    "self_result": None,
+                    "peer_result": None,
                     "self_type": "",
                     "peer_type": "",
                     "created_at": now_iso(),
@@ -548,6 +816,10 @@ class Handler(SimpleHTTPRequestHandler):
                 "peer_submitted": False,
                 "self_scores": None,
                 "peer_scores": None,
+                "self_answers": None,
+                "peer_answers": None,
+                "self_result": None,
+                "peer_result": None,
                 "self_type": "",
                 "peer_type": "",
                 "created_at": now_iso(),
@@ -572,6 +844,8 @@ class Handler(SimpleHTTPRequestHandler):
     def handle_self_submit(self, payload):
         assessment_id = (payload.get("assessment_id") or "").strip()
         scores = sanitize_scores(payload.get("scores"))
+        answers = sanitize_answers(payload.get("answers"))
+        result_payload = sanitize_result(payload.get("result"), scores)
         if not assessment_id or scores is None:
             self._send_json(200, make_resp(False, "参数缺失或格式错误"))
             return
@@ -607,6 +881,8 @@ class Handler(SimpleHTTPRequestHandler):
 
             item["self_scores"] = scores
             item["self_type"] = type_from_scores(scores)
+            item["self_answers"] = answers
+            item["self_result"] = result_payload
             item["self_submitted"] = True
             item["updated_at"] = now_iso()
             assessments[assessment_id] = item
@@ -620,8 +896,12 @@ class Handler(SimpleHTTPRequestHandler):
                 "invite_code": code,
                 "invite_token": item.get("invite_token", ""),
                 "self_type": item.get("self_type", ""),
+                "self_answers": item.get("self_answers"),
+                "self_result": item.get("self_result"),
                 "peer_submitted": bool(item.get("peer_submitted")),
                 "peer_scores": item.get("peer_scores"),
+                "peer_answers": item.get("peer_answers"),
+                "peer_result": item.get("peer_result"),
                 "peer_type": item.get("peer_type", ""),
             }))
 
@@ -704,6 +984,8 @@ class Handler(SimpleHTTPRequestHandler):
     def handle_peer_submit(self, payload):
         assessment_id = (payload.get("assessment_id") or "").strip()
         scores = sanitize_scores(payload.get("scores"))
+        answers = sanitize_answers(payload.get("answers"))
+        result_payload = sanitize_result(payload.get("result"), scores)
         if not assessment_id or scores is None:
             self._send_json(200, make_resp(False, "参数缺失或格式错误"))
             return
@@ -742,6 +1024,8 @@ class Handler(SimpleHTTPRequestHandler):
 
             item["peer_scores"] = scores
             item["peer_type"] = type_from_scores(scores)
+            item["peer_answers"] = answers
+            item["peer_result"] = result_payload
             item["peer_submitted"] = True
             item["updated_at"] = now_iso()
             assessments[assessment_id] = item
@@ -753,7 +1037,9 @@ class Handler(SimpleHTTPRequestHandler):
             self._send_json(200, make_resp(True, "ok", {
                 "assessment_id": assessment_id,
                 "self_type": item.get("self_type", ""),
+                "self_result": item.get("self_result"),
                 "peer_type": item.get("peer_type", ""),
+                "peer_result": item.get("peer_result"),
             }))
 
 

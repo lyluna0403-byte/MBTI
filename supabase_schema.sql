@@ -19,15 +19,24 @@ create table if not exists public.mbti_assessment_sessions (
   peer_submitted boolean not null default false,
   self_scores jsonb,
   peer_scores jsonb,
+  self_answers jsonb,
+  peer_answers jsonb,
+  self_result jsonb,
+  peer_result jsonb,
   self_type text not null default '',
   peer_type text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+alter table public.mbti_assessment_sessions
+  add column if not exists self_answers jsonb,
+  add column if not exists peer_answers jsonb,
+  add column if not exists self_result jsonb,
+  add column if not exists peer_result jsonb;
+
 create index if not exists idx_mbti_assessment_code
   on public.mbti_assessment_sessions(code);
 
 create index if not exists idx_mbti_assessment_invite_token
   on public.mbti_assessment_sessions(invite_token);
-

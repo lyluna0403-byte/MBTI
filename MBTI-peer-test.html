@@ -964,13 +964,23 @@
         }
     }
 
-    async function submitPeerResult() {
+    async function submitPeerResult(resultType) {
         if (!currentAssessmentId) return { ok: false, msg: '⚠️ 会话信息缺失，请重新进入他评' };
         try {
+            const scoresPayload = { ...scores };
             const resp = await fetch(`${getApiBase()}/api/assessment/peer-submit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assessment_id: currentAssessmentId, scores })
+                body: JSON.stringify({
+                    assessment_id: currentAssessmentId,
+                    scores: scoresPayload,
+                    answers: buildAnswersPayload(),
+                    result: {
+                        type: resultType || currentResultType,
+                        scores: scoresPayload,
+                        axis: buildAxisPayload(scoresPayload)
+                    }
+                })
             });
             if (!resp.ok) {
                 return { ok: false, msg: '⚠️ 服务异常，请稍后重试' };
@@ -1015,6 +1025,34 @@
         const apiBase = getApiBase();
         if (apiBase) feedbackUrl.searchParams.set('api_base', apiBase);
         return feedbackUrl.toString();
+    }
+
+    function buildAnswersPayload() {
+        const out = {};
+        questions.forEach((q, idx) => {
+            const option = answerHistory[idx];
+            if (option === 'A' || option === 'B') out[`Q${q.id}`] = option;
+        });
+        return out;
+    }
+
+    function buildAxisPayload(dimensionScores) {
+        const pairs = [['E', 'I'], ['S', 'N'], ['T', 'F'], ['J', 'P']];
+        return pairs.map(([left, right]) => {
+            const leftCount = Number(dimensionScores[left] || 0);
+            const rightCount = Number(dimensionScores[right] || 0);
+            const total = leftCount + rightCount || 7;
+            const leftPct = Math.round((leftCount / total) * 100);
+            return {
+                left,
+                right,
+                left_count: leftCount,
+                right_count: rightCount,
+                left_pct: leftPct,
+                right_pct: 100 - leftPct,
+                total
+            };
+        });
     }
 
     async function tryOpenExistingPeerReport(assessmentId) {
@@ -1300,7 +1338,7 @@
         renderCharts();
 
         if (!shouldSubmit) return;
-        const submitResp = await submitPeerResult();
+        const submitResp = await submitPeerResult(resultType);
         if (!submitResp.ok) {
             showToast(submitResp.msg || "⚠️ 他评提交失败，请稍后重试");
             return;

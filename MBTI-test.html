@@ -1653,6 +1653,34 @@
         return pairs.map(([l, r]) => ((dimensionScores[l] || 0) >= (dimensionScores[r] || 0) ? l : r)).join('');
     }
 
+    function buildAnswersPayload() {
+        const out = {};
+        questions.forEach((q, idx) => {
+            const option = answerHistory[idx];
+            if (option === 'A' || option === 'B') out[`Q${q.id}`] = option;
+        });
+        return out;
+    }
+
+    function buildAxisPayload(dimensionScores) {
+        const pairs = [['E', 'I'], ['S', 'N'], ['T', 'F'], ['J', 'P']];
+        return pairs.map(([left, right]) => {
+            const leftCount = Number(dimensionScores[left] || 0);
+            const rightCount = Number(dimensionScores[right] || 0);
+            const total = leftCount + rightCount || 7;
+            const leftPct = Math.round((leftCount / total) * 100);
+            return {
+                left,
+                right,
+                left_count: leftCount,
+                right_count: rightCount,
+                left_pct: leftPct,
+                right_pct: 100 - leftPct,
+                total
+            };
+        });
+    }
+
     function renderTopByTypeAndScores(type, dimensionScores, subtitleText) {
         if (!type || !typesData[type] || !dimensionScores) return;
         const typeData = typesData[type];
@@ -1685,9 +1713,19 @@
         return apiPost('/api/redeem/verify-self', { code });
     }
 
-    async function submitSelfResult() {
+    async function submitSelfResult(resultType) {
         if (!currentAssessmentId) return { ok: false, msg: '⚠️ 会话信息缺失，请重新进入测评' };
-        return apiPost('/api/assessment/self-submit', { assessment_id: currentAssessmentId, scores });
+        const scoresPayload = { ...scores };
+        return apiPost('/api/assessment/self-submit', {
+            assessment_id: currentAssessmentId,
+            scores: scoresPayload,
+            answers: buildAnswersPayload(),
+            result: {
+                type: resultType || getTypeFromScores(scoresPayload),
+                scores: scoresPayload,
+                axis: buildAxisPayload(scoresPayload)
+            }
+        });
     }
 
     async function fetchAssessmentStatus(assessmentId) {
@@ -2152,7 +2190,7 @@
 
         if (!shouldSubmit) return;
 
-        const submitResp = await submitSelfResult();
+        const submitResp = await submitSelfResult(resultType);
         if (!submitResp.ok) {
             showToast(submitResp.msg || "⚠️ 自评提交失败，请稍后重试");
             return;

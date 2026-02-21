@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MBTI 管理后台</title>
+  <style>
+    :root{
+      --bg1:#f4edf2;
+      --bg2:#e8f3fb;
+      --ink:#24374f;
+      --sub:#5d738a;
+      --brand:#5c97bc;
+      --accent:#d8a0af;
+      --card:#ffffffd8;
+      --line:#c6dbe9;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      color:var(--ink);
+      font-family: "PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+      background: linear-gradient(90deg,var(--bg1),var(--bg2));
+    }
+    .wrap{max-width:1200px;margin:0 auto;padding:20px}
+    .card{
+      background:var(--card);
+      border:1px solid #fff;
+      border-radius:20px;
+      box-shadow:0 16px 40px rgba(87,126,158,.12);
+      backdrop-filter: blur(14px);
+      padding:18px;
+      margin-bottom:16px;
+    }
+    h1{margin:0 0 8px;font-size:30px;color:#4f85aa}
+    .sub{color:var(--sub);margin:0 0 14px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    input,select{
+      height:42px;padding:0 12px;border-radius:12px;border:1px solid var(--line);
+      font-size:15px;min-width:180px;background:#fff;
+    }
+    .btn{
+      height:42px;padding:0 16px;border:0;border-radius:999px;cursor:pointer;
+      background:linear-gradient(90deg,var(--accent),#e2aebe);
+      color:#fff;font-weight:700;font-size:14px;
+    }
+    .btn.sec{background:linear-gradient(90deg,#6ca4c8,#76b2d9)}
+    .grid{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px}
+    .stat{
+      border:1px dashed var(--line);border-radius:12px;padding:10px;background:#fff;
+    }
+    .stat .k{font-size:12px;color:var(--sub)}
+    .stat .v{font-size:24px;color:#4f85aa;font-weight:700}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{padding:8px;border-bottom:1px solid #edf2f7;text-align:left;vertical-align:top}
+    th{color:#5f7a92;background:#f7fbff}
+    .right{margin-left:auto}
+    .hidden{display:none}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    @media (max-width:900px){
+      .grid{grid-template-columns:repeat(2,minmax(120px,1fr))}
+      th:nth-child(n+6),td:nth-child(n+6){display:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>MBTI 管理后台</h1>
+      <p class="sub">支持：兑换码管理、会话查询、导出 CSV（Excel 可直接打开）</p>
+      <div id="loginRow" class="row">
+        <input id="pwd" type="password" placeholder="输入管理员密码" />
+        <button class="btn" id="btnLogin">登录</button>
+        <span id="loginMsg" class="sub"></span>
+      </div>
+      <div id="afterLogin" class="row hidden">
+        <span class="sub">已登录</span>
+        <button class="btn sec" id="btnRefresh">刷新数据</button>
+        <button class="btn" id="btnLogout">退出</button>
+      </div>
+    </div>
+
+    <div id="panel" class="hidden">
+      <div class="card">
+        <div class="grid" id="stats"></div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <input id="keyword" placeholder="邀请码/assessment_id 搜索" />
+          <select id="status">
+            <option value="all">全部会话</option>
+            <option value="self_done">已完成自评</option>
+            <option value="pending_peer">待他评</option>
+            <option value="peer_done">已完成他评</option>
+          </select>
+          <input id="limit" type="number" value="200" min="1" max="5000" />
+          <button class="btn sec" id="btnQuerySessions">查询会话</button>
+          <button class="btn" id="btnExportSessions">导出会话CSV</button>
+        </div>
+        <div style="overflow:auto;margin-top:10px">
+          <table id="sessionsTable">
+            <thead>
+              <tr>
+                <th>assessment_id</th><th>邀请码</th><th>自评</th><th>他评</th><th>自评类型</th><th>他评类型</th><th>更新时间</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <input id="codeKeyword" placeholder="邀请码搜索" />
+          <input id="codeLimit" type="number" value="200" min="1" max="2000" />
+          <button class="btn sec" id="btnQueryCodes">查询兑换码</button>
+          <button class="btn" id="btnExportCodes">导出兑换码CSV</button>
+        </div>
+        <div style="overflow:auto;margin-top:10px">
+          <table id="codesTable">
+            <thead>
+              <tr>
+                <th>邀请码</th><th>自评使用</th><th>他评使用</th><th>总使用</th><th>assessment_id</th><th>更新时间</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function normalizeApiBase(v){return (v||'').trim().replace(/\/+$/,'')}
+    function inferApiBase(){
+      const host=(location.hostname||'').toLowerCase();
+      if(host==='mbti.planttree.top') return 'https://api.planttree.top';
+      if(host.startsWith('mbti.')) return `${location.protocol}//api.${host.slice(5)}`;
+      return location.origin;
+    }
+    function getApiBase(){
+      const qp=new URLSearchParams(location.search).get('api_base');
+      if(qp) return normalizeApiBase(qp);
+      return normalizeApiBase(localStorage.getItem('mbti_api_base')||'') || inferApiBase();
+    }
+
+    const state={adminKey:sessionStorage.getItem('mbti_admin_key')||''};
+    const $ = (id)=>document.getElementById(id);
+    const panel=$('panel'), loginRow=$('loginRow'), afterLogin=$('afterLogin');
+    const loginMsg=$('loginMsg');
+
+    function setLogin(ok){
+      panel.classList.toggle('hidden',!ok);
+      loginRow.classList.toggle('hidden',ok);
+      afterLogin.classList.toggle('hidden',!ok);
+    }
+
+    async function api(path,opt={}){
+      const headers=Object.assign({'Content-Type':'application/json'},opt.headers||{});
+      if(state.adminKey) headers['X-Admin-Key']=state.adminKey;
+      const resp=await fetch(`${getApiBase()}${path}`,Object.assign({},opt,{headers}));
+      return resp.json();
+    }
+
+    function toCsvDownload(blob,filename){
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),500);
+    }
+
+    async function exportCsv(path,filename){
+      const headers={};
+      if(state.adminKey) headers['X-Admin-Key']=state.adminKey;
+      const resp=await fetch(`${getApiBase()}${path}`,{headers});
+      if(!resp.ok){alert('导出失败');return;}
+      const blob=await resp.blob();
+      toCsvDownload(blob,filename);
+    }
+
+    function renderStats(data){
+      const list=[
+        ['兑换码总数',data.total_codes||0],
+        ['已使用兑换码',data.used_codes||0],
+        ['未使用兑换码',data.unused_codes||0],
+        ['会话总数',data.total_sessions||0],
+        ['已自评',data.self_done||0],
+        ['已他评',data.peer_done||0]
+      ];
+      $('stats').innerHTML=list.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+    }
+
+    function renderSessions(rows){
+      const tb=$('#sessionsTable tbody');
+      tb.innerHTML=(rows||[]).map(r=>`
+        <tr>
+          <td class="mono">${r.assessment_id||''}</td>
+          <td class="mono">${r.code||''}</td>
+          <td>${r.self_submitted?'是':'否'}</td>
+          <td>${r.peer_submitted?'是':'否'}</td>
+          <td>${r.self_type||''}</td>
+          <td>${r.peer_type||''}</td>
+          <td class="mono">${r.updated_at||''}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderCodes(rows){
+      const tb=$('#codesTable tbody');
+      tb.innerHTML=(rows||[]).map(r=>`
+        <tr>
+          <td class="mono">${r.code||''}</td>
+          <td>${r.self_used||0}</td>
+          <td>${r.peer_used||0}</td>
+          <td>${r.total_used||0}</td>
+          <td class="mono">${r.assessment_id||''}</td>
+          <td class="mono">${r.updated_at||''}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadSummary(){
+      const res=await api('/api/admin/summary');
+      if(!res.ok){alert(res.msg||'加载失败');return false;}
+      renderStats(res);
+      return true;
+    }
+
+    async function querySessions(){
+      const q=encodeURIComponent(($('keyword').value||'').trim());
+      const st=encodeURIComponent($('status').value||'all');
+      const limit=encodeURIComponent(($('limit').value||'200').trim());
+      const res=await api(`/api/admin/sessions?keyword=${q}&status=${st}&limit=${limit}`);
+      if(!res.ok){alert(res.msg||'查询失败');return;}
+      renderSessions(res.rows||[]);
+    }
+
+    async function queryCodes(){
+      const q=encodeURIComponent(($('codeKeyword').value||'').trim());
+      const limit=encodeURIComponent(($('codeLimit').value||'200').trim());
+      const res=await api(`/api/admin/codes?keyword=${q}&limit=${limit}`);
+      if(!res.ok){alert(res.msg||'查询失败');return;}
+      renderCodes(res.rows||[]);
+    }
+
+    async function login(){
+      const pwd=$('pwd').value||'';
+      const res=await api('/api/admin/login',{method:'POST',body:JSON.stringify({password:pwd})});
+      if(!res.ok){loginMsg.textContent=res.msg||'登录失败';return;}
+      state.adminKey=pwd;
+      sessionStorage.setItem('mbti_admin_key',pwd);
+      setLogin(true);
+      await loadSummary();
+      await querySessions();
+      await queryCodes();
+    }
+
+    async function initAuto(){
+      if(!state.adminKey){setLogin(false);return;}
+      setLogin(true);
+      const ok=await loadSummary();
+      if(!ok){
+        sessionStorage.removeItem('mbti_admin_key');
+        state.adminKey='';
+        setLogin(false);
+        return;
+      }
+      await querySessions();
+      await queryCodes();
+    }
+
+    $('btnLogin').addEventListener('click',login);
+    $('pwd').addEventListener('keydown',(e)=>{if(e.key==='Enter')login();});
+    $('btnLogout').addEventListener('click',()=>{
+      sessionStorage.removeItem('mbti_admin_key');
+      state.adminKey='';
+      setLogin(false);
+      loginMsg.textContent='';
+      $('pwd').value='';
+    });
+    $('btnRefresh').addEventListener('click',async()=>{await loadSummary();await querySessions();await queryCodes();});
+    $('btnQuerySessions').addEventListener('click',querySessions);
+    $('btnQueryCodes').addEventListener('click',queryCodes);
+    $('btnExportSessions').addEventListener('click',async()=>{
+      const q=encodeURIComponent(($('keyword').value||'').trim());
+      const st=encodeURIComponent($('status').value||'all');
+      await exportCsv(`/api/admin/export/sessions.csv?keyword=${q}&status=${st}`,'mbti_assessment_sessions.csv');
+    });
+    $('btnExportCodes').addEventListener('click',async()=>{
+      const q=encodeURIComponent(($('codeKeyword').value||'').trim());
+      await exportCsv(`/api/admin/export/codes.csv?keyword=${q}`,'mbti_redeem_codes.csv');
+    });
+
+    initAuto();
+  </script>
+</body>
+</html>
+
