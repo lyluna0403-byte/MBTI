@@ -31,7 +31,16 @@ SENSITIVE_EXACT_PATHS = {
     "/redeem_codes.txt",
 }
 SENSITIVE_EXTENSIONS = (".json", ".py", ".yaml", ".yml", ".md", ".txt", ".log")
-SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
+
+
+def normalize_supabase_url(raw):
+    value = (raw or "").strip().rstrip("/")
+    if value.startswith("ttps://"):
+        value = f"h{value}"
+    return value
+
+
+SUPABASE_URL = normalize_supabase_url(os.getenv("SUPABASE_URL", ""))
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 SUPABASE_CODES_TABLE = os.getenv("SUPABASE_CODES_TABLE", "mbti_redeem_codes").strip()
 SUPABASE_ASSESSMENTS_TABLE = os.getenv("SUPABASE_ASSESSMENTS_TABLE", "mbti_assessment_sessions").strip()
