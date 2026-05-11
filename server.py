@@ -230,29 +230,6 @@ def type_from_scores(scores):
 
 def init_files():
     if use_supabase():
-        try:
-            codes = load_json(CODES_FILE)
-            if not codes:
-                if os.path.exists(SEED_CODES_FILE):
-                    save_json(CODES_FILE, load_json(SEED_CODES_FILE))
-                else:
-                    data = {}
-                    while len(data) < 200:
-                        code = gen_code(8)
-                        data[code] = {
-                            "self_used": 0,
-                            "peer_used": 0,
-                            "total_used": 0,
-                            "assessment_id": None,
-                            "updated_at": now_iso(),
-                        }
-                    save_json(CODES_FILE, data)
-
-            assessments = load_json(ASSESSMENTS_FILE)
-            if assessments is None:
-                save_json(ASSESSMENTS_FILE, {})
-        except Exception as e:
-            raise RuntimeError(f"Supabase init failed: {e}") from e
         return
 
     os.makedirs(DATA_DIR, exist_ok=True)

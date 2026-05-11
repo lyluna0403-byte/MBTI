@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 
 
 class ServerConfigTests(unittest.TestCase):
@@ -24,6 +25,13 @@ class ServerConfigTests(unittest.TestCase):
         )
 
         self.assertEqual(result.stdout.strip(), "https://example.supabase.co")
+
+    def test_supabase_mode_does_not_preconnect_during_startup_init(self):
+        import server
+
+        with patch.object(server, "use_supabase", return_value=True), \
+                patch.object(server, "load_json", side_effect=RuntimeError("dns failed")):
+            server.init_files()
 
 
 if __name__ == "__main__":
